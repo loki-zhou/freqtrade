@@ -137,7 +137,7 @@ EXCHANGES = {
                 'tradeType': 'TRADE'
             }],
     },
-    'gateio': {
+    'gate': {
         'pair': 'BTC/USDT',
         'stake_currency': 'USDT',
         'hasQuoteVolume': True,
@@ -336,7 +336,7 @@ def exchange_futures(request, exchange_conf, class_mocker):
         yield exchange, request.param
 
 
-# @pytest.mark.longrun
+@pytest.mark.longrun
 class TestCCXTExchange():
 
     def test_load_markets(self, exchange: EXCHANGE_FIXTURE_TYPE):
@@ -357,8 +357,8 @@ class TestCCXTExchange():
             'stoploss': 'limit',
             })
 
-        if exchangename == 'gateio':
-            # gateio doesn't have market orders on spot
+        if exchangename == 'gate':
+            # gate doesn't have market orders on spot
             return
         exch.validate_ordertypes({
             'entry': 'market',
@@ -421,7 +421,7 @@ class TestCCXTExchange():
 
     def test_ccxt_fetch_tickers_futures(self, exchange_futures: EXCHANGE_FIXTURE_TYPE):
         exch, exchangename = exchange_futures
-        if not exch or exchangename in ('gateio'):
+        if not exch or exchangename in ('gate'):
             # exchange_futures only returns values for supported exchanges
             return
 
@@ -461,8 +461,8 @@ class TestCCXTExchange():
         assert len(l2['bids']) >= 1
         l2_limit_range = exch._ft_has['l2_limit_range']
         l2_limit_range_required = exch._ft_has['l2_limit_range_required']
-        if exchangename == 'gateio':
-            # TODO: Gateio is unstable here at the moment, ignoring the limit partially.
+        if exchangename == 'gate':
+            # TODO: Gate is unstable here at the moment, ignoring the limit partially.
             return
         for val in [1, 2, 5, 25, 100]:
             l2 = exch.fetch_l2_order_book(pair, val)
@@ -534,8 +534,7 @@ class TestCCXTExchange():
 
     def test_ccxt__async_get_candle_history(self, exchange: EXCHANGE_FIXTURE_TYPE):
         exc, exchangename = exchange
-        if exchangename in ('binanceus', 'bittrex'):
-            # TODO: reenable binanceus test once downtime "ages out" (2023-02-06)
+        if exchangename in ('bittrex'):
             # For some weired reason, this test returns random lengths for bittrex.
             pytest.skip("Exchange doesn't provide stable ohlcv history")
 
