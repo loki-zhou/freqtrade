@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from freqtrade.constants import BuySell
-from freqtrade.enums import MarginMode, TradingMode
+from freqtrade.enums import MarginMode, PriceType, TradingMode
 from freqtrade.exceptions import OperationalException
 from freqtrade.exchange import Exchange
 from freqtrade.misc import safe_value_fallback2
@@ -13,7 +13,7 @@ from freqtrade.misc import safe_value_fallback2
 logger = logging.getLogger(__name__)
 
 
-class Gateio(Exchange):
+class Gate(Exchange):
     """
     Gate.io exchange class. Contains adjustments needed for Freqtrade to work
     with this exchange.
@@ -34,13 +34,12 @@ class Gateio(Exchange):
         "needs_trading_fees": True,
         "fee_cost_in_contracts": False,  # Set explicitly to false for clarity
         "order_props_in_contracts": ['amount', 'filled', 'remaining'],
-        # TODO: Reenable once https://github.com/ccxt/ccxt/issues/16749 is available
-        # "stop_price_type_field": "price_type",
-        # "stop_price_type_value_mapping": {
-        #     PriceType.LAST: 0,
-        #     PriceType.MARK: 1,
-        #     PriceType.INDEX: 2,
-        # },
+        "stop_price_type_field": "price_type",
+        "stop_price_type_value_mapping": {
+            PriceType.LAST: 0,
+            PriceType.MARK: 1,
+            PriceType.INDEX: 2,
+        },
     }
 
     _supported_trading_mode_margin_pairs: List[Tuple[TradingMode, MarginMode]] = [
@@ -85,7 +84,7 @@ class Gateio(Exchange):
 
         if self.trading_mode == TradingMode.FUTURES:
             # Futures usually don't contain fees in the response.
-            # As such, futures orders on gateio will not contain a fee, which causes
+            # As such, futures orders on gate will not contain a fee, which causes
             # a repeated "update fee" cycle and wrong calculations.
             # Therefore we patch the response with fees if it's not available.
             # An alternative also contianing fees would be
