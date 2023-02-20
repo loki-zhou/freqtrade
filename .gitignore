@@ -14,7 +14,6 @@ user_data/logs/*
 user_data/models/*
 user_data/plot/*
 
-
 freqtrade-plot.html
 freqtrade-profit-plot.html
 freqtrade/rpc/api_server/ui/*
