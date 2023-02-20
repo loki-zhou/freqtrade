@@ -23,7 +23,8 @@
         "ccxt_config": {},
         "ccxt_async_config": {},
         "pair_whitelist": [
-            "BTC/USDT:USDT"
+            "1INCH/USDT:USDT",
+            "ALGO/USDT:USDT"
         ],
         "pair_blacklist": []
     },
@@ -58,7 +59,8 @@
         "data_kitchen_thread_count": 2,
         "feature_parameters": {
             "include_corr_pairlist": [
-                "BTC/USDT:USDT"
+                "BTC/USDT:USDT",
+                "ETH/USDT:USDT"
             ],
             "include_timeframes": [
                 "3m",
