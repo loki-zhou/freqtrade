@@ -7,7 +7,7 @@
     "tradable_balance_ratio": 0.99,
     "fiat_display_currency": "USD",
     "dry_run": true,
-    "timeframe": "3m",
+    "timeframe": "1h",
     "dry_run_wallet": 100000,
     "cancel_open_orders_on_exit": false,
     "unfilledtimeout": {
@@ -52,26 +52,24 @@
         "model_save_type": "stable_baselines",
         "conv_width": 4,
         "purge_old_models": true,
-        "train_period_days": 28,
-        "backtest_period_days": 2,
-        "identifier": "uniqe-id-RL-000",
+        "train_period_days": 90,
+        "backtest_period_days": 30,
+        "identifier": "btc-train-1h",
         "data_kitchen_thread_count": 2,
         "feature_parameters": {
             "include_corr_pairlist": [
                 "BTC/USDT:USDT"
             ],
             "include_timeframes": [
-                "3m",
-                "15m",
                 "1h"
             ],
             "include_shifted_candles": 3,
             "indicator_max_period_candles": 50,
-            "indicator_periods_candles": [5, 10, 20],
+            "indicator_periods_candles": [12, 24, 72],
             "reverse_train_test_order": true
         },
         "data_split_parameters": {
-            "test_size": 0.5,
+            "test_size": 0.3,
             "random_state": 1,
             "shuffle": false
         },
@@ -83,11 +81,11 @@
         "rl_config": {
             "train_cycles": 25,
             "max_trade_duration_candles": 300,
-            "max_training_drawdown_pct": 0.02,
+            "max_training_drawdown_pct": 0.2,
             "cpu_count": 4,
             "model_type": "PPO",
             "policy_type": "MlpPolicy",
-            "continual_learning": false,
+            "continual_learning": true,
             "model_reward_parameters": {
                 "rr": 1,
                 "profit_aim": 0.025
