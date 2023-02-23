@@ -7,7 +7,7 @@
     "tradable_balance_ratio": 0.99,
     "fiat_display_currency": "USD",
     "dry_run": true,
-    "timeframe": "1h",
+    "timeframe": "3m",
     "dry_run_wallet": 100000,
     "cancel_open_orders_on_exit": false,
     "unfilledtimeout": {
@@ -23,7 +23,8 @@
         "ccxt_config": {},
         "ccxt_async_config": {},
         "pair_whitelist": [
-            "BTC/USDT:USDT"
+            "1INCH/USDT:USDT",
+            "ALGO/USDT:USDT"
         ],
         "pair_blacklist": []
     },
@@ -52,15 +53,18 @@
         "model_save_type": "stable_baselines",
         "conv_width": 4,
         "purge_old_models": true,
-        "train_period_days": 30,
-        "backtest_period_days": 14,
-        "identifier": "train_btc_1h",
+        "train_period_days": 28,
+        "backtest_period_days": 2,
+        "identifier": "uniqe-id-RL-000",
         "data_kitchen_thread_count": 2,
         "feature_parameters": {
             "include_corr_pairlist": [
-                "BTC/USDT:USDT"
+                "BTC/USDT:USDT",
+                "ETH/USDT:USDT"
             ],
             "include_timeframes": [
+                "3m",
+                "15m",
                 "1h"
             ],
             "include_shifted_candles": 3,
@@ -69,7 +73,7 @@
             "reverse_train_test_order": true
         },
         "data_split_parameters": {
-            "test_size": 0.3,
+            "test_size": 0.5,
             "random_state": 1,
             "shuffle": false
         },
@@ -81,7 +85,7 @@
         "rl_config": {
             "train_cycles": 25,
             "max_trade_duration_candles": 300,
-            "max_training_drawdown_pct": 0.2,
+            "max_training_drawdown_pct": 0.02,
             "cpu_count": 4,
             "model_type": "PPO",
             "policy_type": "MlpPolicy",
