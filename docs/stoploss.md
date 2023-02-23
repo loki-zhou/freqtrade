@@ -24,7 +24,7 @@ These modes can be configured with these values:
 ```
 
 !!! Note
-    Stoploss on exchange is only supported for Binance (stop-loss-limit), Huobi (stop-limit), Kraken (stop-loss-market, stop-loss-limit), Gateio (stop-limit), and Kucoin (stop-limit and stop-market) as of now.  
+    Stoploss on exchange is only supported for Binance (stop-loss-limit), Huobi (stop-limit), Kraken (stop-loss-market, stop-loss-limit), Gate (stop-limit), and Kucoin (stop-limit and stop-market) as of now.  
     <ins>Do not set too low/tight stoploss value if using stop loss on exchange!</ins>  
     If set to low/tight then you have greater risk of missing fill on the order and stoploss will not work.
 
@@ -57,6 +57,7 @@ This same logic will reapply a stoploss order on the exchange should you cancel 
 !!! Warning "Only applies to futures"
     `stoploss_price_type` only applies to futures markets (on exchanges where it's available).
     Freqtrade will perform a validation of this setting on startup, failing to start if an invalid setting for your exchange has been selected.
+    Supported price types are gonna differs between each exchanges. Please check with your exchange on which price types it supports.
 
 Stoploss on exchange on futures markets can trigger on different price types.
 The naming for these prices in exchange terminology often varies, but is usually something around "last" (or "contract price" ), "mark" and "index".
