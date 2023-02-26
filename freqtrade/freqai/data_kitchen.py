@@ -1,6 +1,7 @@
 import copy
 import inspect
 import logging
+import random
 import shutil
 from datetime import datetime, timezone
 from math import cos, sin
@@ -169,6 +170,19 @@ class FreqaiDataKitchen:
             train_features = filtered_dataframe
             train_labels = labels
             train_weights = weights
+
+        if feat_dict["shuffle_after_split"]:
+            rint1 = random.randint(0, 100)
+            rint2 = random.randint(0, 100)
+            train_features = train_features.sample(
+                frac=1, random_state=rint1).reset_index(drop=True)
+            train_labels = train_labels.sample(frac=1, random_state=rint1).reset_index(drop=True)
+            train_weights = pd.DataFrame(train_weights).sample(
+                frac=1, random_state=rint1).reset_index(drop=True).to_numpy()[:, 0]
+            test_features = test_features.sample(frac=1, random_state=rint2).reset_index(drop=True)
+            test_labels = test_labels.sample(frac=1, random_state=rint2).reset_index(drop=True)
+            test_weights = pd.DataFrame(test_weights).sample(
+                frac=1, random_state=rint2).reset_index(drop=True).to_numpy()[:, 0]
 
         # Simplest way to reverse the order of training and test data:
         if self.freqai_config['feature_parameters'].get('reverse_train_test_order', False):
@@ -1548,3 +1562,25 @@ class FreqaiDataKitchen:
             dataframe.columns = dataframe.columns.str.replace(c, "")
 
         return dataframe
+
+    def buffer_timerange(self, timerange: TimeRange):
+        """
+        Buffer the start and end of the timerange. This is used *after* the indicators
+        are populated.
+
+        The main example use is when predicting maxima and minima, the argrelextrema
+        function  cannot know the maxima/minima at the edges of the timerange. To improve
+        model accuracy, it is best to compute argrelextrema on the full timerange
+        and then use this function to cut off the edges (buffer) by the kernel.
+
+        In another case, if the targets are set to a shifted price movement, this
+        buffer is unnecessary because the shifted candles at the end of the timerange
+        will be NaN and FreqAI will automatically cut those off of the training
+        dataset.
+        """
+        buffer = self.freqai_config["feature_parameters"]["buffer_train_data_candles"]
+        if buffer:
+            timerange.stopts -= buffer * timeframe_to_seconds(self.config["timeframe"])
+            timerange.startts += buffer * timeframe_to_seconds(self.config["timeframe"])
+
+        return timerange
