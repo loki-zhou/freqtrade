@@ -92,7 +92,7 @@
             }
         }
     },
-    "bot_name": "",
+    "bot_name": "testbtc",
     "force_entry_enable": true,
     "initial_state": "running",
     "internals": {
