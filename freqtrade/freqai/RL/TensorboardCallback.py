@@ -20,7 +20,6 @@ class TensorboardCallback(BaseCallback):
         self.actions: Type[Enum] = actions
     def _on_rollout_end(self) -> None:
         figure = self.training_env.render()
-        from  matplotlib.figure import  Figure
         self.logger.record(
             "rollout/positions",
             Figure(figure, close=True),

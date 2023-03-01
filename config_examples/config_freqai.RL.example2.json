@@ -10,7 +10,6 @@
     "timeframe": "1h",
     "dry_run_wallet": 100000,
     "cancel_open_orders_on_exit": false,
-    "stoploss": -0.10,
     "unfilledtimeout": {
         "entry": 10,
         "exit": 10,
@@ -81,6 +80,9 @@
             "verbose": 1
         },
         "rl_config": {
+            "net_arch": [0],
+            "use_env_signals" : true,
+            "progress_bar": true,
             "train_cycles": 25,
             "max_trade_duration_candles": 300,
             "max_training_drawdown_pct": 0.2,
