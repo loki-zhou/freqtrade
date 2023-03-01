@@ -1,0 +1,159 @@
+ 
+{
+
+    //config based on BUSD BT config
+
+    "max_open_trades": 5,
+    "stake_currency": "BUSD",
+    "stake_amount": 330,
+    "tradable_balance_ratio": 0.99,
+    "fiat_display_currency": "USD",
+
+    "dry_run": true,
+    "cancel_open_orders_on_exit": false,
+    
+    //"stoploss": -0.15,
+
+    "dataformat_ohlcv": "hdf5",
+    "dataformat_trades": "hdf5",
+
+
+    "entry_pricing": {
+        "price_side": "other",
+        "use_order_book": true,
+        "order_book_top": 1,
+        "price_last_balance": 0.0,
+        "check_depth_of_market": {
+            "enabled": false,
+            "bids_to_ask_delta": 1
+        }
+    },
+    "exit_pricing": {
+        "price_side": "other",
+        "use_order_book": true,
+        "order_book_top": 1
+    },
+
+
+    "exchange": {
+        "name": "binance",
+        "key": "your_exchange_key",
+        "secret": "your_exchange_secret",
+        "ccxt_config": {"enableRateLimit": true},
+        "ccxt_async_config": {
+            "enableRateLimit": true,
+            "rateLimit": 200
+        },
+        "pair_whitelist": [
+ 
+        "BTC/BUSD", "ETH/BUSD", "SOL/BUSD", "ETC/BUSD", "ANKR/BUSD", "RUNE/BUSD", "ADA/BUSD", "AVAX/BUSD", "NEAR/BUSD", "DOT/BUSD", "MATIC/BUSD", "UNFI/BUSD", "LINK/BUSD", "SHIB/BUSD", "FIL/BUSD", "XRP/BUSD", "BTCST/BUSD", "APE/BUSD", "SLP/BUSD", "FTM/BUSD", "STMX/BUSD", "DOGE/BUSD", "GMT/BUSD", "ROSE/BUSD", "API3/BUSD", "GALA/BUSD", "SAND/BUSD", "LDO/BUSD", "ZIL/BUSD", "BAL/BUSD", "TORN/BUSD", "INJ/BUSD", "FLOW/BUSD", "ONE/BUSD", "FTT/BUSD", "CHZ/BUSD", "COS/BUSD", "UNI/BUSD", "GAL/BUSD", "JASMY/BUSD", "VET/BUSD", "ATOM/BUSD", "LTC/BUSD", "ICP/BUSD", "WING/BUSD", "TROY/BUSD", "WAVES/BUSD", "CELR/BUSD", "KDA/BUSD", "EGLD/BUSD", "TRB/BUSD", "THETA/BUSD", "TFUEL/BUSD", "AXS/BUSD", "OOKI/BUSD", "AAVE/BUSD", "FLUX/BUSD", "AUCTION/BUSD", "TRX/BUSD", "ALGO/BUSD", "LPT/BUSD", "ENS/BUSD", "HBAR/BUSD", "STPT/BUSD", "RVN/BUSD", "IMX/BUSD", "PYR/BUSD", "ACH/BUSD", "FIDA/BUSD", "DYDX/BUSD", "BURGER/BUSD", "GLMR/BUSD", "SPELL/BUSD", "MANA/BUSD", "ANC/BUSD", "IOST/BUSD", "TOMO/BUSD", "BCH/BUSD", "RSR/BUSD", "MKR/BUSD", "LINA/BUSD", "ALICE/BUSD", "AERGO/BUSD", "LIT/BUSD", "CRV/BUSD", "XMR/BUSD", "AUDIO/BUSD", "QI/BUSD", "EOS/BUSD", "WOO/BUSD", "MINA/BUSD", "LRC/BUSD", "PEOPLE/BUSD", "WAXP/BUSD", "BAKE/BUSD", "KP3R/BUSD", "MASK/BUSD", "FXS/BUSD", "PROM/BUSD", "COMP/BUSD", "GRT/BUSD", "CAKE/BUSD", "YFI/BUSD", "TWT/BUSD", "COCOS/BUSD", "T/BUSD", "XLM/BUSD", "BOND/BUSD", "SNX/BUSD", "DODO/BUSD", "SUSHI/BUSD", "TLM/BUSD", "SXP/BUSD", "DAR/BUSD", "SKL/BUSD", "AR/BUSD", "CELO/BUSD", "C98/BUSD", "CTXC/BUSD", "KLAY/BUSD", "NEXO/BUSD", "MOVR/BUSD", "AGLD/BUSD", "YGG/BUSD", "FARM/BUSD", "IDEX/BUSD", "QNT/BUSD", "BEL/BUSD", "ASTR/BUSD", "ONT/BUSD", "ENJ/BUSD", "ZRX/BUSD", "BAT/BUSD", "SRM/BUSD", "CTK/BUSD", "OGN/BUSD", "BETA/BUSD", "MDX/BUSD", "HIVE/BUSD", "CLV/BUSD", "KAVA/BUSD", "HNT/BUSD", "BAND/BUSD", "CREAM/BUSD", "SYS/BUSD", "POWR/BUSD", "RAY/BUSD", "NEO/BUSD", "ADX/BUSD", "GTC/BUSD", "1INCH/BUSD", "XEC/BUSD", "BTG/BUSD", "IQ/BUSD", "KSM/BUSD", "CTSI/BUSD", "VOXEL/BUSD", "REEF/BUSD", "DUSK/BUSD", "ZEC/BUSD", "ACA/BUSD", "OCEAN/BUSD", "CHR/BUSD", "LOKA/BUSD", "BICO/BUSD", "TKO/BUSD", "DEGO/BUSD", "ILV/BUSD", "HIGH/BUSD", "BSW/BUSD", "FET/BUSD", "FORTH/BUSD", "UFT/BUSD", "SCRT/BUSD", "STORJ/BUSD", "ZEN/BUSD", "XVG/BUSD", "DENT/BUSD", "ICX/BUSD", "REN/BUSD", "POND/BUSD", "MBOX/BUSD", "COTI/BUSD", "RNDR/BUSD", "PHA/BUSD", "BADGER/BUSD", "HOT/BUSD", "KNC/BUSD", "WIN/BUSD", "IOTA/BUSD", "CVX/BUSD", "IOTX/BUSD", "ELF/BUSD", "FRONT/BUSD", "XTZ/BUSD", "AVA/BUSD", "ORN/BUSD", "PERP/BUSD", "SUPER/BUSD", "ACM/BUSD", "NMR/BUSD", "DASH/BUSD", "MLN/BUSD", "MIR/BUSD", "STRAX/BUSD", "OM/BUSD", "OMG/BUSD", "MOB/BUSD", "FIO/BUSD", "XVS/BUSD", "SC/BUSD", "NULS/BUSD", "CHESS/BUSD", "TVK/BUSD", "DIA/BUSD", "BNX/BUSD", "CFX/BUSD", "SUN/BUSD", "QUICK/BUSD", "CVP/BUSD", "AMP/BUSD", "UMA/BUSD", "ANT/BUSD", "PSG/BUSD", "ALCX/BUSD", "ALPHA/BUSD", "JST/BUSD", "JOE/BUSD", "OXT/BUSD", "ARPA/BUSD", "LAZIO/BUSD", "MTL/BUSD", "STX/BUSD", "SFP/BUSD", "ATA/BUSD", "WRX/BUSD", "RARE/BUSD", "JUV/BUSD", "LSK/BUSD", "MULTI/BUSD", "DNT/BUSD", "BNT/BUSD", "POLS/BUSD", "LTO/BUSD", "TRIBE/BUSD", "MC/BUSD", "MDT/BUSD", "ALPACA/BUSD", "RAD/BUSD", "ERN/BUSD", "AUTO/BUSD", "BIFI/BUSD", "ALPINE/BUSD", "DEXE/BUSD", "UTK/BUSD", "POLY/BUSD", "CKB/BUSD", "QTUM/BUSD", "ATM/BUSD", "DF/BUSD", "FOR/BUSD", "REQ/BUSD", "DATA/BUSD", "CITY/BUSD", "XNO/BUSD", "GHST/BUSD", 
+
+        ],
+        "pair_blacklist": [
+ 
+            "(LUNC|LUNA|ANC|FTT)/.*",
+            // Exchange
+            "(BNB)/.*",
+            // Leverage
+            ".*(_PREMIUM|BEAR|BULL|DOWN|HALF|HEDGE|UP|[1235][SL])/.*",
+            // Fiat
+            "(AUD|BRZ|CAD|CHF|EUR|GBP|HKD|IDRT|JPY|NGN|RUB|SGD|TRY|UAH|USD|ZAR)/.*",
+            // Stable
+            "(BUSD|CUSDT|DAI|PAXG|SUSD|TUSD|USDC|USDP|USDT|VAI)/.*",
+            // FAN
+            "(ACM|AFA|ALA|ALL|APL|ASR|ATM|BAR|CAI|CITY|FOR|GAL|GOZ|IBFK|JUV|LAZIO|LEG|LOCK-1|NAVI|NMR|NOV|OG|PFL|PORTO|PSG|ROUSH|SANTOS|STV|TH|TRA|UCH|UFC|YBO)/.*",
+
+
+ 
+        ]
+    },
+    "pairlists": [
+    
+        {"method": "StaticPairList"},
+        {"method": "AgeFilter", "min_days_listed": 7},
+
+        {
+                "method": "VolatilityFilter",
+                "lookback_days": 3,
+                "min_volatility": 0.02,
+                "max_volatility": 0.75,
+                "refresh_period": 3600
+        },
+
+        {
+            "method": "RangeStabilityFilter",
+            "lookback_days": 3,
+            "min_rate_of_change": 0.05,
+            "refresh_period": 3600
+        },
+
+        {"method": "SpreadFilter", "max_spread_ratio": 0.008},
+        {"method": "PrecisionFilter"},
+        {"method": "PriceFilter", "low_price_ratio": 0.01},
+    ],
+
+
+    "freqai": {
+        "enabled": true,
+        "purge_old_models": true,
+        "train_period_days": 30,
+        "backtest_period_days": 7,
+        "identifier" : "unique-id",
+        "feature_parameters" : {
+            "include_timeframes": ["1d","4h"],
+            "include_corr_pairlist": [
+                "ETH/BUSD",
+                "BTC/BUSD",
+                "BNB/BUSD"
+            ],
+            "label_period_candles": 24,
+            "include_shifted_candles": 2,
+            "indicator_periods_candles": [10, 20]
+        },
+        "data_split_parameters" : {
+            "test_size": 0.25
+        },
+    
+
+        "rl_config": {
+            "train_cycles": 25,
+            "add_state_info": true,
+            "max_trade_duration_candles": 300,
+            "max_training_drawdown_pct": 0.02,
+            "cpu_count": 8,
+            "model_type": "PPO",
+            "policy_type": "MlpPolicy",
+            "model_reward_parameters": {
+                "rr": 1,
+                "profit_aim": 0.025
+            },
+        },
+
+    },
+
+
+
+
+    "telegram": {
+        "enabled": false,
+        "token": "your_telegram_token",
+        "chat_id": "your_telegram_chat_id"
+    },
+    "api_server": {
+        "enabled": false,
+        "listen_ip_address": "127.0.0.1",
+        "listen_port": 8080,
+        "verbosity": "info",
+        "jwt_secret_key": "somethingrandom",
+        "CORS_origins": [],
+        "username": "",
+        "password": ""
+    },
+    "initial_state": "running",
+    "forcebuy_enable": false,
+    "internals": {
+        "process_throttle_secs": 5
+    },
+
+
+}
