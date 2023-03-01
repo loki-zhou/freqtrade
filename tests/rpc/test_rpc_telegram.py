@@ -20,7 +20,8 @@ from telegram.error import BadRequest, NetworkError, TelegramError
 from freqtrade import __version__
 from freqtrade.constants import CANCEL_REASON
 from freqtrade.edge import PairInfo
-from freqtrade.enums import ExitType, RPCMessageType, RunMode, SignalDirection, State
+from freqtrade.enums import (ExitType, MarketDirection, RPCMessageType, RunMode, SignalDirection,
+                             State)
 from freqtrade.exceptions import OperationalException
 from freqtrade.freqtradebot import FreqtradeBot
 from freqtrade.loggers import setup_logging
@@ -106,7 +107,7 @@ def test_telegram_init(default_conf, mocker, caplog) -> None:
                    "['reload_config', 'reload_conf'], ['show_config', 'show_conf'], "
                    "['stopbuy', 'stopentry'], ['whitelist'], ['blacklist'], "
                    "['blacklist_delete', 'bl_delete'], "
-                   "['logs'], ['edge'], ['health'], ['help'], ['version']"
+                   "['logs'], ['edge'], ['health'], ['help'], ['version'], ['marketdir']"
                    "]")
 
     assert log_has(message_str, caplog)
@@ -202,6 +203,9 @@ def test_telegram_status(default_conf, update, mocker) -> None:
             'close_profit_ratio': None,
             'profit': -0.0059,
             'profit_ratio': -0.0059,
+            'profit_abs': -0.225,
+            'realized_profit': 0.0,
+            'total_profit_abs': -0.225,
             'initial_stop_loss_abs': 1.098e-05,
             'stop_loss_abs': 1.099e-05,
             'exit_order_status': None,
@@ -2394,3 +2398,15 @@ def test__send_msg_keyboard(default_conf, mocker, caplog) -> None:
     assert log_has("using custom keyboard from config.json: "
                    "[['/daily', '/stats', '/balance', '/profit', '/profit 5'], ['/count', "
                    "'/start', '/reload_config', '/help']]", caplog)
+
+
+def test_change_market_direction(default_conf, mocker, update) -> None:
+    telegram, _, msg_mock = get_telegram_testobject(mocker, default_conf)
+    assert telegram._rpc._freqtrade.strategy.market_direction == MarketDirection.NONE
+    context = MagicMock()
+    context.args = ["long"]
+    telegram._changemarketdir(update, context)
+    assert telegram._rpc._freqtrade.strategy.market_direction == MarketDirection.LONG
+    context = MagicMock()
+    context.args = ["invalid"]
+    assert telegram._rpc._freqtrade.strategy.market_direction == MarketDirection.LONG

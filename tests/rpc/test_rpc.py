@@ -1,6 +1,3 @@
-# pragma pylint: disable=missing-docstring, C0103
-# pragma pylint: disable=invalid-sequence-index, invalid-name, too-many-arguments
-
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from unittest.mock import ANY, MagicMock, PropertyMock
@@ -19,15 +16,6 @@ from tests.conftest import (create_mock_trades, create_mock_trades_usdt, get_pat
                             patch_get_signal)
 
 
-# Functions for recurrent object patching
-def prec_satoshi(a, b) -> float:
-    """
-    :return: True if A and B differs less than one satoshi.
-    """
-    return abs(a - b) < 0.00000001
-
-
-# Unit tests
 def test_rpc_trade_status(default_conf, ticker, fee, mocker) -> None:
     gen_response = {
         'trade_id': 1,
@@ -68,9 +56,6 @@ def test_rpc_trade_status(default_conf, ticker, fee, mocker) -> None:
         'close_profit': None,
         'close_profit_pct': None,
         'close_profit_abs': None,
-        'current_profit': -0.00408133,
-        'current_profit_pct': -0.41,
-        'current_profit_abs': -4.09e-06,
         'profit_ratio': -0.00408133,
         'profit_pct': -0.41,
         'profit_abs': -4.09e-06,
@@ -91,6 +76,8 @@ def test_rpc_trade_status(default_conf, ticker, fee, mocker) -> None:
         'stoploss_entry_dist_ratio': -0.10376381,
         'open_order': None,
         'realized_profit': 0.0,
+        'total_profit_abs': -4.09e-06,
+        'total_profit_fiat': ANY,
         'exchange': 'binance',
         'leverage': 1.0,
         'interest_rate': 0.0,
@@ -134,9 +121,7 @@ def test_rpc_trade_status(default_conf, ticker, fee, mocker) -> None:
         'profit_ratio': 0.0,
         'profit_pct': 0.0,
         'profit_abs': 0.0,
-        'current_profit': 0.0,
-        'current_profit_pct': 0.0,
-        'current_profit_abs': 0.0,
+        'total_profit_abs': 0.0,
         'stop_loss_abs': 0.0,
         'stop_loss_pct': None,
         'stop_loss_ratio': None,
@@ -187,7 +172,7 @@ def test_rpc_trade_status(default_conf, ticker, fee, mocker) -> None:
     mocker.patch('freqtrade.exchange.Exchange.get_rate',
                  MagicMock(side_effect=ExchangeError("Pair 'ETH/BTC' not available")))
     results = rpc._rpc_trade_status()
-    assert isnan(results[0]['current_profit'])
+    assert isnan(results[0]['profit_ratio'])
     assert isnan(results[0]['current_rate'])
     response_norate = deepcopy(gen_response)
     # Update elements that are NaN when no rate is available.
@@ -198,9 +183,7 @@ def test_rpc_trade_status(default_conf, ticker, fee, mocker) -> None:
         'profit_ratio': ANY,
         'profit_pct': ANY,
         'profit_abs': ANY,
-        'current_profit_abs': ANY,
-        'current_profit': ANY,
-        'current_profit_pct': ANY,
+        'total_profit_abs': ANY,
         'current_rate': ANY,
     })
     assert results[0] == response_norate
@@ -553,8 +536,8 @@ def test_rpc_balance_handle(default_conf, mocker, tickers):
     rpc._fiat_converter = CryptoToFiatConverter()
 
     result = rpc._rpc_balance(default_conf['stake_currency'], default_conf['fiat_display_currency'])
-    assert prec_satoshi(result['total'], 30.30909624)
-    assert prec_satoshi(result['value'], 454636.44360691)
+    assert pytest.approx(result['total']) == 30.30909624
+    assert pytest.approx(result['value']) == 454636.44360691
     assert tickers.call_count == 1
     assert tickers.call_args_list[0][1]['cached'] is True
     assert 'USD' == result['symbol']
@@ -875,17 +858,17 @@ def test_enter_tag_performance_handle_2(mocker, default_conf, markets, fee):
     assert len(res) == 2
     assert res[0]['enter_tag'] == 'TEST1'
     assert res[0]['count'] == 1
-    assert prec_satoshi(res[0]['profit_pct'], 0.5)
+    assert pytest.approx(res[0]['profit_pct']) == 0.5
     assert res[1]['enter_tag'] == 'Other'
     assert res[1]['count'] == 1
-    assert prec_satoshi(res[1]['profit_pct'], 1.0)
+    assert pytest.approx(res[1]['profit_pct']) == 1.0
 
     # Test for a specific pair
     res = rpc._rpc_enter_tag_performance('ETC/BTC')
     assert len(res) == 1
     assert res[0]['count'] == 1
     assert res[0]['enter_tag'] == 'TEST1'
-    assert prec_satoshi(res[0]['profit_pct'], 0.5)
+    assert pytest.approx(res[0]['profit_pct']) == 0.5
 
 
 def test_exit_reason_performance_handle(default_conf_usdt, ticker, fee, mocker) -> None:
@@ -931,17 +914,17 @@ def test_exit_reason_performance_handle_2(mocker, default_conf, markets, fee):
     assert len(res) == 2
     assert res[0]['exit_reason'] == 'sell_signal'
     assert res[0]['count'] == 1
-    assert prec_satoshi(res[0]['profit_pct'], 0.5)
+    assert pytest.approx(res[0]['profit_pct']) == 0.5
     assert res[1]['exit_reason'] == 'roi'
     assert res[1]['count'] == 1
-    assert prec_satoshi(res[1]['profit_pct'], 1.0)
+    assert pytest.approx(res[1]['profit_pct']) == 1.0
 
     # Test for a specific pair
     res = rpc._rpc_exit_reason_performance('ETC/BTC')
     assert len(res) == 1
     assert res[0]['count'] == 1
     assert res[0]['exit_reason'] == 'sell_signal'
-    assert prec_satoshi(res[0]['profit_pct'], 0.5)
+    assert pytest.approx(res[0]['profit_pct']) == 0.5
 
 
 def test_mix_tag_performance_handle(default_conf, ticker, fee, mocker) -> None:
@@ -984,10 +967,10 @@ def test_mix_tag_performance_handle_2(mocker, default_conf, markets, fee):
     assert len(res) == 2
     assert res[0]['mix_tag'] == 'TEST1 sell_signal'
     assert res[0]['count'] == 1
-    assert prec_satoshi(res[0]['profit_pct'], 0.5)
+    assert pytest.approx(res[0]['profit_pct']) == 0.5
     assert res[1]['mix_tag'] == 'Other roi'
     assert res[1]['count'] == 1
-    assert prec_satoshi(res[1]['profit_pct'], 1.0)
+    assert pytest.approx(res[1]['profit_pct']) == 1.0
 
     # Test for a specific pair
     res = rpc._rpc_mix_tag_performance('ETC/BTC')
@@ -995,7 +978,7 @@ def test_mix_tag_performance_handle_2(mocker, default_conf, markets, fee):
     assert len(res) == 1
     assert res[0]['count'] == 1
     assert res[0]['mix_tag'] == 'TEST1 sell_signal'
-    assert prec_satoshi(res[0]['profit_pct'], 0.5)
+    assert pytest.approx(res[0]['profit_pct']) == 0.5
 
 
 def test_rpc_count(mocker, default_conf, ticker, fee) -> None:
@@ -1252,6 +1235,6 @@ def test_rpc_health(mocker, default_conf) -> None:
 
     freqtradebot = get_patched_freqtradebot(mocker, default_conf)
     rpc = RPC(freqtradebot)
-    result = rpc._health()
-    assert result['last_process'] == '1970-01-01 00:00:00+00:00'
-    assert result['last_process_ts'] == 0
+    result = rpc.health()
+    assert result['last_process'] is None
+    assert result['last_process_ts'] is None
