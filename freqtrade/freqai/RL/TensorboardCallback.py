@@ -18,7 +18,15 @@ class TensorboardCallback(BaseCallback):
         self.logger = None  # type: Any
         self.training_env: BaseEnvironment = None  # type: ignore
         self.actions: Type[Enum] = actions
-
+    def _on_rollout_end(self) -> None:
+        figure = self.training_env.render()
+        from  matplotlib.figure import  Figure
+        self.logger.record(
+            "rollout/positions",
+            Figure(figure, close=True),
+            exclude=("stdout", "log", "json", "csv")
+        )
+        return True
     def _on_training_start(self) -> None:
         hparam_dict = {
             "algorithm": self.model.__class__.__name__,
