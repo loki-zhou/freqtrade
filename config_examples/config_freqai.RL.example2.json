@@ -10,6 +10,7 @@
     "timeframe": "1h",
     "dry_run_wallet": 100000,
     "cancel_open_orders_on_exit": false,
+    "stoploss": -0.10,
     "unfilledtimeout": {
         "entry": 10,
         "exit": 10,
@@ -54,7 +55,7 @@
         "purge_old_models": 2,
         "train_period_days": 60,
         "backtest_period_days": 30,
-        "identifier": "btc-train-1hx",
+        "identifier": "ReforceX2",
         "data_kitchen_thread_count": 2,
         "continual_learning": true,
         "feature_parameters": {

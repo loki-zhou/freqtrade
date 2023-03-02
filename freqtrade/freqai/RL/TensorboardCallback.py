@@ -5,7 +5,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import HParam
 
 from freqtrade.freqai.RL.BaseEnvironment import BaseActions, BaseEnvironment
-
+from stable_baselines3.common.logger import Figure
 
 class TensorboardCallback(BaseCallback):
     """
@@ -18,6 +18,7 @@ class TensorboardCallback(BaseCallback):
         self.logger = None  # type: Any
         self.training_env: BaseEnvironment = None  # type: ignore
         self.actions: Type[Enum] = actions
+
     def _on_rollout_end(self) -> None:
         figure = self.training_env.render()
         self.logger.record(
@@ -26,6 +27,7 @@ class TensorboardCallback(BaseCallback):
             exclude=("stdout", "log", "json", "csv")
         )
         return True
+
     def _on_training_start(self) -> None:
         hparam_dict = {
             "algorithm": self.model.__class__.__name__,

@@ -10,7 +10,7 @@ from pandas import DataFrame
 
 from freqtrade.freqai.data_kitchen import FreqaiDataKitchen
 from freqtrade.freqai.RL.BaseReinforcementLearningModel import BaseReinforcementLearningModel
-from freqtrade.freqai.RL.TensorboardCallback import TensorboardCallback
+
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.utils import explained_variance
@@ -18,7 +18,8 @@ from stable_baselines3.common.utils import explained_variance
 from sb3_contrib.common.maskable.callbacks import MaskableEvalCallback
 from sb3_contrib.common.maskable.utils import get_action_masks
 from freqtrade.freqai.RL.BaseReinforcementLearningModel import make_env, Positions
-
+# from FigureRecorderCallback import FigureRecorderCallback as TensorboardCallback
+from freqtrade.freqai.RL.TensorboardCallback import TensorboardCallback
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +134,7 @@ class ReforceXBaseModel(BaseReinforcementLearningModel):
             )
             actions = self.train_env.env_method("get_actions")[0]
             self.tensorboard_callback = TensorboardCallback(verbose=1, actions=actions)
+
 
         self.set_model_specific_params(data_dictionary, dk)
 
