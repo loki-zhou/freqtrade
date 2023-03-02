@@ -55,7 +55,7 @@
         "purge_old_models": 2,
         "train_period_days": 60,
         "backtest_period_days": 30,
-        "identifier": "ReforceX2",
+        "identifier": "ReforceX",
         "data_kitchen_thread_count": 2,
         "continual_learning": true,
         "feature_parameters": {
@@ -85,6 +85,7 @@
             "use_env_signals" : true,
             "progress_bar": true,
             "train_cycles": 25,
+            "max_total_profit": 1000,
             "max_trade_duration_candles": 300,
             "max_training_drawdown_pct": 0.2,
             "cpu_count": 4,
