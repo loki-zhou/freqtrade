@@ -7,6 +7,7 @@ from freqtrade.freqai.RL.Base4ActionRLEnv import Actions, Base4ActionRLEnv, Posi
 from ReforceXBaseModel import ReforceXBaseModel
 import matplotlib.pyplot as plt
 import matplotlib.transforms as mtransforms
+from empyrical import sortino_ratio
 
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,10 @@ class ReforceXModel4ac(ReforceXBaseModel):
 
         metadata = {"render.modes": ["human"]}
 
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.net_worths = [self._total_profit]
+
         def action_masks(self) -> List[bool]:
             return [self._is_valid(action) for action in np.arange(self.action_space.n)]
 
@@ -28,28 +33,32 @@ class ReforceXModel4ac(ReforceXBaseModel):
 
             if not self._is_valid(action):
                 self.tensorboard_log("action_invalid")
-                return 0.
+                return -1.
+            pnl = self.get_unrealized_profit()
+            reward = sortino_ratio(np.diff(self.net_worths+[self.net_worths[-1]+pnl]), annualization=365*24)
+            return reward if np.isfinite(reward) else 0
 
-            elif self._position == Positions.Neutral:
-                # Idle
-                if action == Actions.Neutral.value:
-                    self.tensorboard_log("action_idle")
-                    return 0.
 
-                # Entry
-                elif action in (Actions.Long_enter.value, Actions.Short_enter.value):
-                    return 0.
-
-            elif self._position != Positions.Neutral:
-                # Hold
-                if action == Actions.Neutral.value:
-                    self.tensorboard_log("action_hold")
-                    return 0.
-
-                # Exit
-                elif action == Actions.Exit.value:
-                    return self.get_unrealized_profit()
-            return 0.
+            # elif self._position == Positions.Neutral:
+            #     # Idle
+            #     if action == Actions.Neutral.value:
+            #         self.tensorboard_log("action_idle")
+            #         return 0.
+            #
+            #     # Entry
+            #     elif action in (Actions.Long_enter.value, Actions.Short_enter.value):
+            #         return 0.
+            #
+            # elif self._position != Positions.Neutral:
+            #     # Hold
+            #     if action == Actions.Neutral.value:
+            #         self.tensorboard_log("action_hold")
+            #         return 0.
+            #
+            #     # Exit
+            #     elif action == Actions.Exit.value:
+            #         return self.get_unrealized_profit()
+            #return 0.
 
         def step(self, action: int):
             self._current_tick += 1
@@ -66,6 +75,7 @@ class ReforceXModel4ac(ReforceXBaseModel):
             info = self.gather_info(action)
             self._update_history(info)
             self._position_history.append(self._position)
+            self.net_worths.append(self._total_profit)
             return self._get_observation(), step_reward, self.is_done(), info
 
         def gather_info(self, action) -> dict:
