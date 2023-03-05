@@ -53,7 +53,7 @@ class BaseRegressionModel(IFreqaiModel):
         if not self.freqai_info.get("fit_live_predictions_candles", 0) or not self.live:
             dk.fit_labels()
         # normalize all data based on train_dataset only
-        data_dictionary = dk.normalize_data(data_dictionary)
+        #data_dictionary = dk.normalize_data(data_dictionary)
 
         # optional additional data cleaning/analysis
         self.data_cleaning_train(dk)

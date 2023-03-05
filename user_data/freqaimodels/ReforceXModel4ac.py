@@ -24,19 +24,21 @@ class ReforceXModel4ac(ReforceXBaseModel):
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
-            self.net_worths = [self._total_profit]
+            self.net_worths = [self._total_unrealized_profit]
 
         def action_masks(self) -> List[bool]:
             return [self._is_valid(action) for action in np.arange(self.action_space.n)]
 
         def calculate_reward(self, action):
-
+            self.tensorboard_log("net_worths", self.net_worths[-1])
             if not self._is_valid(action):
                 self.tensorboard_log("action_invalid")
-                return -1.
-            pnl = self.get_unrealized_profit()
-            reward = sortino_ratio(np.diff(self.net_worths+[self.net_worths[-1]+pnl]), annualization=365*24)
-            return reward if np.isfinite(reward) else 0
+                return -10.
+
+            reward = sortino_ratio(np.diff(self.net_worths), annualization=365*24)
+            reward = reward if np.isfinite(reward) else 0
+            self.tensorboard_log("reward", reward)
+            return reward
 
 
             # elif self._position == Positions.Neutral:
@@ -75,7 +77,7 @@ class ReforceXModel4ac(ReforceXBaseModel):
             info = self.gather_info(action)
             self._update_history(info)
             self._position_history.append(self._position)
-            self.net_worths.append(self._total_profit)
+            self.net_worths.append(self._total_unrealized_profit)
             return self._get_observation(), step_reward, self.is_done(), info
 
         def gather_info(self, action) -> dict:

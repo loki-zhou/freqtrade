@@ -106,7 +106,7 @@ class SpotReinforcementLearningModel(IFreqaiModel):
 
         # normalize all data based on train_dataset only
         prices_train, prices_test = self.build_ohlc_price_dataframes(dk.data_dictionary, pair, dk)
-        data_dictionary = dk.normalize_data(data_dictionary)
+        #data_dictionary = dk.normalize_data(data_dictionary)
 
         # data cleaning/analysis
         self.data_cleaning_train(dk)
