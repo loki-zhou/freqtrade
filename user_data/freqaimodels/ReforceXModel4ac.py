@@ -30,14 +30,22 @@ class ReforceXModel4ac(ReforceXBaseModel):
             return [self._is_valid(action) for action in np.arange(self.action_space.n)]
 
         def calculate_reward(self, action):
-            self.tensorboard_log("net_worths", self.net_worths[-1])
+            # self.tensorboard_log("net_worths", self.net_worths[-1])
             if not self._is_valid(action):
                 self.tensorboard_log("action_invalid")
-                return -10.
+                return -2.
+            pnl = self.get_unrealized_profit()
+            reward1 = 0
+            if len(self.net_worths) > 1 :
+                reward1 = 1000 * (self.net_worths[-1] - self.net_worths[-2])
 
-            reward = sortino_ratio(np.diff(self.net_worths), annualization=365*24)
-            reward = reward if np.isfinite(reward) else 0
-            self.tensorboard_log("reward", reward)
+            trade_duration = self.get_trade_duration()
+            reward2 = 0
+            if self._position != Positions.Neutral and action == Actions.Exit.value:
+                if trade_duration != 0:
+                    reward2 = 10000*pnl/trade_duration
+
+            reward = reward1 + reward2
             return reward
 
 
