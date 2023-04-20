@@ -10,10 +10,10 @@ from typing import Dict, List, Optional, Tuple, Union
 import arrow
 from pandas import DataFrame
 
-from freqtrade.constants import Config, IntOrInf, ListPairsWithTimeframes
+from freqtrade.constants import CUSTOM_TAG_MAX_LENGTH, Config, IntOrInf, ListPairsWithTimeframes
 from freqtrade.data.dataprovider import DataProvider
-from freqtrade.enums import (CandleType, ExitCheckTuple, ExitType, RunMode, SignalDirection,
-                             SignalTagType, SignalType, TradingMode)
+from freqtrade.enums import (CandleType, ExitCheckTuple, ExitType, MarketDirection, RunMode,
+                             SignalDirection, SignalTagType, SignalType, TradingMode)
 from freqtrade.exceptions import OperationalException, StrategyError
 from freqtrade.exchange import timeframe_to_minutes, timeframe_to_next_date, timeframe_to_seconds
 from freqtrade.misc import remove_entry_exit_signals
@@ -27,7 +27,6 @@ from freqtrade.wallets import Wallets
 
 
 logger = logging.getLogger(__name__)
-CUSTOM_EXIT_MAX_LENGTH = 64
 
 
 class IStrategy(ABC, HyperStrategyMixin):
@@ -121,6 +120,9 @@ class IStrategy(ABC, HyperStrategyMixin):
 
     # Definition of plot_config. See plotting documentation for more details.
     plot_config: Dict = {}
+
+    # A self set parameter that represents the market direction. filled from configuration
+    market_direction: MarketDirection = MarketDirection.NONE
 
     def __init__(self, config: Config) -> None:
         self.config = config
@@ -248,11 +250,12 @@ class IStrategy(ABC, HyperStrategyMixin):
         """
         pass
 
-    def bot_loop_start(self, **kwargs) -> None:
+    def bot_loop_start(self, current_time: datetime, **kwargs) -> None:
         """
         Called at the start of the bot iteration (one loop).
         Might be used to perform pair-independent tasks
         (e.g. gather some remote resource for comparison)
+        :param current_time: datetime object, containing the current datetime
         :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
         """
         pass
@@ -1114,11 +1117,11 @@ class IStrategy(ABC, HyperStrategyMixin):
                     exit_signal = ExitType.CUSTOM_EXIT
                     if isinstance(reason_cust, str):
                         custom_reason = reason_cust
-                        if len(reason_cust) > CUSTOM_EXIT_MAX_LENGTH:
+                        if len(reason_cust) > CUSTOM_TAG_MAX_LENGTH:
                             logger.warning(f'Custom exit reason returned from '
                                            f'custom_exit is too long and was trimmed'
-                                           f'to {CUSTOM_EXIT_MAX_LENGTH} characters.')
-                            custom_reason = reason_cust[:CUSTOM_EXIT_MAX_LENGTH]
+                                           f'to {CUSTOM_TAG_MAX_LENGTH} characters.')
+                            custom_reason = reason_cust[:CUSTOM_TAG_MAX_LENGTH]
                     else:
                         custom_reason = ''
             if (
