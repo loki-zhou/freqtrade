@@ -29,7 +29,35 @@ class ReforceXModel4ac(ReforceXBaseModel):
         def action_masks(self) -> List[bool]:
             return [self._is_valid(action) for action in np.arange(self.action_space.n)]
 
+
         def calculate_reward(self, action):
+
+            if not self._is_valid(action):
+                self.tensorboard_log("action_invalid")
+                return 0.
+
+            elif self._position == Positions.Neutral:
+                # Idle
+                if action == Actions.Neutral.value:
+                    self.tensorboard_log("action_idle")
+                    return 0.
+
+                # Entry
+                elif action in (Actions.Long_enter.value, Actions.Short_enter.value):
+                    return 0.
+
+            elif self._position != Positions.Neutral:
+                # Hold
+                if action == Actions.Neutral.value:
+                    self.tensorboard_log("action_hold")
+                    return 0.
+
+                # Exit
+                elif action == Actions.Exit.value:
+                    return self.get_unrealized_profit()
+            return 0.
+
+        def calculate_reward2(self, action):
             # self.tensorboard_log("net_worths", self.net_worths[-1])
             if not self._is_valid(action):
                 self.tensorboard_log("action_invalid")
