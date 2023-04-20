@@ -1,4 +1,3 @@
-import inspect
 import logging
 import threading
 import time
@@ -84,6 +83,7 @@ class IFreqaiModel(ABC):
         self.CONV_WIDTH = self.freqai_info.get('conv_width', 1)
         if self.ft_params.get("inlier_metric_window", 0):
             self.CONV_WIDTH = self.ft_params.get("inlier_metric_window", 0) * 2
+        self.class_names: List[str] = []  # used in classification subclasses
         self.pair_it = 0
         self.pair_it_train = 0
         self.total_pairs = len(self.config.get("exchange", {}).get("pair_whitelist"))
@@ -105,8 +105,10 @@ class IFreqaiModel(ABC):
         self.data_provider: Optional[DataProvider] = None
         self.max_system_threads = max(int(psutil.cpu_count() * 2 - 2), 1)
         self.can_short = True  # overridden in start() with strategy.can_short
-
-        self.warned_deprecated_populate_any_indicators = False
+        self.model: Any = None
+        if self.ft_params.get('principal_component_analysis', False) and self.continual_learning:
+            self.ft_params.update({'principal_component_analysis': False})
+            logger.warning('User tried to use PCA with continual learning. Deactivating PCA.')
 
         record_params(config, self.full_path)
 
@@ -138,9 +140,6 @@ class IFreqaiModel(ABC):
         self.data_provider = strategy.dp
         self.can_short = strategy.can_short
 
-        # check if the strategy has deprecated populate_any_indicators function
-        self.check_deprecated_populate_any_indicators(strategy)
-
         if self.live:
             self.inference_timer('start')
             self.dk = FreqaiDataKitchen(self.config, self.live, metadata["pair"])
@@ -159,8 +158,7 @@ class IFreqaiModel(ABC):
                 dk = self.start_backtesting(dataframe, metadata, self.dk, strategy)
                 dataframe = dk.remove_features_from_df(dk.return_dataframe)
             else:
-                logger.info(
-                    "Backtesting using historic predictions (live models)")
+                logger.info("Backtesting using historic predictions (live models)")
                 dk = self.start_backtesting_from_historic_predictions(
                     dataframe, metadata, self.dk)
                 dataframe = dk.return_dataframe
@@ -309,7 +307,7 @@ class IFreqaiModel(ABC):
                 if check_features:
                     self.dd.load_metadata(dk)
                     dataframe_dummy_features = self.dk.use_strategy_to_populate_indicators(
-                        strategy, prediction_dataframe=dataframe.tail(1), pair=metadata["pair"]
+                        strategy, prediction_dataframe=dataframe.tail(1), pair=pair
                     )
                     dk.find_features(dataframe_dummy_features)
                     self.check_if_feature_list_matches_strategy(dk)
@@ -319,7 +317,7 @@ class IFreqaiModel(ABC):
             else:
                 if populate_indicators:
                     dataframe = self.dk.use_strategy_to_populate_indicators(
-                        strategy, prediction_dataframe=dataframe, pair=metadata["pair"]
+                        strategy, prediction_dataframe=dataframe, pair=pair
                     )
                     populate_indicators = False
 
@@ -335,6 +333,10 @@ class IFreqaiModel(ABC):
                 dataframe_train = dk.slice_dataframe(tr_train, dataframe_base_train)
                 dataframe_backtest = dk.slice_dataframe(tr_backtest, dataframe_base_backtest)
 
+                dataframe_train = dk.remove_special_chars_from_feature_names(dataframe_train)
+                dataframe_backtest = dk.remove_special_chars_from_feature_names(dataframe_backtest)
+                dk.get_unique_classes_from_labels(dataframe_train)
+
                 if not self.model_exists(dk):
                     dk.find_features(dataframe_train)
                     dk.find_labels(dataframe_train)
@@ -344,13 +346,14 @@ class IFreqaiModel(ABC):
                     except Exception as msg:
                         logger.warning(
                             f"Training {pair} raised exception {msg.__class__.__name__}. "
-                            f"Message: {msg}, skipping.")
+                            f"Message: {msg}, skipping.", exc_info=True)
+                        self.model = None
 
                     self.dd.pair_dict[pair]["trained_timestamp"] = int(
                         tr_train.stopts)
-                    if self.plot_features:
+                    if self.plot_features and self.model is not None:
                         plot_feature_importance(self.model, pair, dk, self.plot_features)
-                    if self.save_backtest_models:
+                    if self.save_backtest_models and self.model is not None:
                         logger.info('Saving backtest model to disk.')
                         self.dd.save_data(self.model, pair, dk)
                     else:
@@ -491,7 +494,7 @@ class IFreqaiModel(ABC):
                 "strategy is furnishing the same features as the pretrained"
                 "model. In case of --strategy-list, please be aware that FreqAI "
                 "requires all strategies to maintain identical "
-                "populate_any_indicator() functions"
+                "feature_engineering_* functions"
             )
 
     def data_cleaning_train(self, dk: FreqaiDataKitchen) -> None:
@@ -569,8 +572,9 @@ class IFreqaiModel(ABC):
             file_type = ".joblib"
         elif self.dd.model_type == 'keras':
             file_type = ".h5"
-        elif 'stable_baselines' in self.dd.model_type or 'sb3_contrib' == self.dd.model_type:
+        elif self.dd.model_type in ["stable_baselines3", "sb3_contrib", "pytorch"]:
             file_type = ".zip"
+
         path_to_modelfile = Path(dk.data_path / f"{dk.model_filename}_model{file_type}")
         file_exists = path_to_modelfile.is_file()
         if file_exists:
@@ -603,7 +607,7 @@ class IFreqaiModel(ABC):
         :param strategy: IStrategy = user defined strategy object
         :param dk: FreqaiDataKitchen = non-persistent data container for current coin/loop
         :param data_load_timerange: TimeRange = the amount of data to be loaded
-                                    for populate_any_indicators
+                                    for populating indicators
                                     (larger than new_trained_timerange so that
                                     new_trained_timerange does not contain any NaNs)
         """
@@ -809,7 +813,7 @@ class IFreqaiModel(ABC):
                 logger.warning("Couldn't cache corr_pair dataframes for improved performance. "
                                "Consider ensuring that the full coin/stake, e.g. XYZ/USD, "
                                "is included in the column names when you are creating features "
-                               "in `populate_any_indicators()`.")
+                               "in `feature_engineering_*` functions.")
             self.get_corr_dataframes = not bool(self.corr_dataframes)
         elif self.corr_dataframes:
             dataframe = dk.attach_corr_pair_columns(
@@ -935,26 +939,6 @@ class IFreqaiModel(ABC):
         dk.return_dataframe = pd.merge(
             dk.return_dataframe, saved_dataframe, how='left', left_on='date', right_on="date_pred")
         return dk
-
-    def check_deprecated_populate_any_indicators(self, strategy: IStrategy):
-        """
-        Check and warn if the deprecated populate_any_indicators function is used.
-        :param strategy: strategy object
-        """
-
-        if not self.warned_deprecated_populate_any_indicators:
-            self.warned_deprecated_populate_any_indicators = True
-            old_version = inspect.getsource(strategy.populate_any_indicators) != (
-                inspect.getsource(IStrategy.populate_any_indicators))
-
-            if old_version:
-                logger.warning("DEPRECATION WARNING: "
-                               "You are using the deprecated populate_any_indicators function. "
-                               "This function will raise an error on March 1 2023. "
-                               "Please update your strategy by using "
-                               "the new feature_engineering functions. See \n"
-                               "https://www.freqtrade.io/en/latest/freqai-feature-engineering/"
-                               "for details.")
 
     # Following methods which are overridden by user made prediction models.
     # See freqai/prediction_models/CatboostPredictionModel.py for an example.

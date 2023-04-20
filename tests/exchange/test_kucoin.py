@@ -4,8 +4,8 @@ from unittest.mock import MagicMock
 import ccxt
 import pytest
 
-from freqtrade.exceptions import DependencyException, InvalidOrderException, OperationalException
-from tests.conftest import get_patched_exchange
+from freqtrade.exceptions import DependencyException, InvalidOrderException
+from tests.conftest import EXMS, get_patched_exchange
 from tests.exchange.test_exchange import ccxt_exceptionhandlers
 
 
@@ -26,12 +26,12 @@ def test_create_stoploss_order_kucoin(default_conf, mocker, limitratio, expected
         }
     })
     default_conf['dry_run'] = False
-    mocker.patch('freqtrade.exchange.Exchange.amount_to_precision', lambda s, x, y: y)
-    mocker.patch('freqtrade.exchange.Exchange.price_to_precision', lambda s, x, y: y)
+    mocker.patch(f'{EXMS}.amount_to_precision', lambda s, x, y: y)
+    mocker.patch(f'{EXMS}.price_to_precision', lambda s, x, y, **kwargs: y)
 
     exchange = get_patched_exchange(mocker, default_conf, api_mock, 'kucoin')
     if order_type == 'limit':
-        with pytest.raises(OperationalException):
+        with pytest.raises(InvalidOrderException):
             order = exchange.create_stoploss(pair='ETH/BTC', amount=1, stop_price=190,
                                              order_types={
                                                  'stoploss': order_type,
@@ -87,12 +87,12 @@ def test_stoploss_order_dry_run_kucoin(default_conf, mocker):
     api_mock = MagicMock()
     order_type = 'market'
     default_conf['dry_run'] = True
-    mocker.patch('freqtrade.exchange.Exchange.amount_to_precision', lambda s, x, y: y)
-    mocker.patch('freqtrade.exchange.Exchange.price_to_precision', lambda s, x, y: y)
+    mocker.patch(f'{EXMS}.amount_to_precision', lambda s, x, y: y)
+    mocker.patch(f'{EXMS}.price_to_precision', lambda s, x, y, **kwargs: y)
 
     exchange = get_patched_exchange(mocker, default_conf, api_mock, 'kucoin')
 
-    with pytest.raises(OperationalException):
+    with pytest.raises(InvalidOrderException):
         order = exchange.create_stoploss(pair='ETH/BTC', amount=1, stop_price=190,
                                          order_types={'stoploss': 'limit',
                                                       'stoploss_on_exchange_limit_ratio': 1.05},
@@ -146,8 +146,8 @@ def test_kucoin_create_order(default_conf, mocker, side, ordertype, rate):
         'amount': 1
     })
     default_conf['dry_run'] = False
-    mocker.patch('freqtrade.exchange.Exchange.amount_to_precision', lambda s, x, y: y)
-    mocker.patch('freqtrade.exchange.Exchange.price_to_precision', lambda s, x, y: y)
+    mocker.patch(f'{EXMS}.amount_to_precision', lambda s, x, y: y)
+    mocker.patch(f'{EXMS}.price_to_precision', lambda s, x, y: y)
     exchange = get_patched_exchange(mocker, default_conf, api_mock, id='kucoin')
     exchange._set_leverage = MagicMock()
     exchange.set_margin_mode = MagicMock()
