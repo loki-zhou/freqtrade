@@ -21,105 +21,65 @@ from freqtrade.strategy import (CategoricalParameter, DecimalParameter, IntParam
 logger = logging.getLogger(__name__)
 
 class FreqaiExampleRLStrategy(IStrategy):
-
+    # 定义ROI
     minimal_roi = {"0": 0.1, "240": -1}
-
+    # 定义绘图配置: 附图指标, 收盘价预测值蓝色, 异常值棕色
     plot_config = {
         "main_plot": {},
         "subplots": {
-            "prediction": {"prediction": {"color": "blue"}},
-            "target_roi": {
-                "target_roi": {"color": "brown"},
-            },
+            "&-s_close": {"prediction": {"color": "blue"}},
             "do_predict": {
                 "do_predict": {"color": "brown"},
             },
-            "&-action": {
-                "&-action": {"color": "green"},
-            },
         },
     }
-
+    # 只在新K线出现时计算
     process_only_new_candles = True
-    stoploss = -0.03
+    # 止损
+    stoploss = -0.05
+    # 启用退出信号: custom_exit
     use_exit_signal = True
-    startup_candle_count: int = 300
+    # 起始K线数量
+    startup_candle_count: int = 40
+    # 是否可做空
     can_short = True
+    # 自定义参数空间
+    std_dev_multiplier_buy = CategoricalParameter(
+        [0.75, 1, 1.25, 1.5, 1.75], default=1.25, space="buy", optimize=True)
+    std_dev_multiplier_sell = CategoricalParameter(
+        [0.75, 1, 1.25, 1.5, 1.75], space="sell", default=1.25, optimize=True)
 
-    def populate_any_indicators(
-        self, pair, df, tf, informative=None, set_generalized_indicators=False
-    ):
+    def feature_engineering_expand_all(self, dataframe: DataFrame, period: int,
+                                        **kwargs):
 
-        if informative is None:
-            informative = self.dp.get_pair_dataframe(pair, tf)
+        dataframe["%-rsi-period"] = ta.RSI(dataframe, timeperiod=period)
 
-        # first loop is automatically duplicating indicators for time periods
-        for t in self.freqai_info["feature_parameters"]["indicator_periods_candles"]:
-            t = int(t)
+        return dataframe
 
-            informative[f"%-{pair}rsi-period_{t}"] = ta.RSI(informative, timeperiod=t)
-            informative[f"%-{pair}adx-period_{t}"] = ta.ADX(informative, window=t)
-            informative[f"%-{pair}sma-period_{t}"] = ta.SMA(informative, timeperiod=t)
-            informative[f"%-{pair}ema-period_{t}"] = ta.EMA(informative, timeperiod=t)
+    def feature_engineering_expand_basic(self, dataframe: DataFrame, **kwargs):
 
-            bollinger = qtpylib.bollinger_bands(
-                qtpylib.typical_price(informative), window=t, stds=2.2
-            )
-            informative[f"{pair}bb_lowerband-period_{t}"] = bollinger["lower"]
-            informative[f"{pair}bb_middleband-period_{t}"] = bollinger["mid"]
-            informative[f"{pair}bb_upperband-period_{t}"] = bollinger["upper"]
+        dataframe["%-pct-change"] = dataframe["close"].pct_change()
+        dataframe["%-raw_volume"] = dataframe["volume"]
 
-            informative[f"%-{pair}bb_width-period_{t}"] = (
-                informative[f"{pair}bb_upperband-period_{t}"]
-                - informative[f"{pair}bb_lowerband-period_{t}"]
-            ) / informative[f"{pair}bb_middleband-period_{t}"]
-            informative[f"%-{pair}close-bb_lower-period_{t}"] = (
-                informative["close"] / informative[f"{pair}bb_lowerband-period_{t}"]
-            )
+        return dataframe
 
-            # informative[f"%-{pair}roc-period_{t}"] = ta.ROC(informative, timeperiod=t)
+    def feature_engineering_standard(self, dataframe: DataFrame,  **kwargs):
 
-            informative[f"%-{pair}relative_volume-period_{t}"] = (
-                informative["volume"] / informative["volume"].rolling(t).mean()
-            )
+        dataframe["%-day_of_week"] = dataframe["date"].dt.dayofweek
+        dataframe["%-hour_of_day"] = dataframe["date"].dt.hour
 
-        informative[f"%-{pair}pct-change"] = informative["close"].pct_change()
-        informative[f"%-{pair}raw_volume"] = informative["volume"]
-        informative[f"%-{pair}raw_price"] = informative["close"]
+        dataframe["%-raw_close"] = dataframe["close"]
+        dataframe["%-raw_open"] = dataframe["open"]
+        dataframe["%-raw_high"] = dataframe["high"]
+        dataframe["%-raw_low"] = dataframe["low"]
 
-        # The following columns are necessary for RL models.
-        informative[f"%-{pair}raw_close"] = informative["close"]
-        informative[f"%-{pair}raw_open"] = informative["open"]
-        informative[f"%-{pair}raw_high"] = informative["high"]
-        informative[f"%-{pair}raw_low"] = informative["low"]
+        return dataframe
 
-        indicators = [col for col in informative if col.startswith("%")]
-        # This loop duplicates and shifts all indicators to add a sense of recency to data
-        for n in range(self.freqai_info["feature_parameters"]["include_shifted_candles"] + 1):
-            if n == 0:
-                continue
-            informative_shift = informative[indicators].shift(n)
-            informative_shift = informative_shift.add_suffix("_shift-" + str(n))
-            informative = pd.concat((informative, informative_shift), axis=1)
+    def set_freqai_targets(self, dataframe: DataFrame, **kwargs):
 
-        df = merge_informative_pair(df, informative, self.config["timeframe"], tf, ffill=True)
-        skip_columns = [
-            (s + "_" + tf) for s in ["date", "open", "high", "low", "close", "volume"]
-        ]
-        df = df.drop(columns=skip_columns)
+        dataframe["&-action"] = 0
 
-        # Add generalized indicators here (because in live, it will call this
-        # function to populate indicators during training). Notice how we ensure not to
-        # add them multiple times
-        if set_generalized_indicators:
-            df["%-day_of_week"] = (df["date"].dt.dayofweek + 1) / 7
-            df["%-hour_of_day"] = (df["date"].dt.hour + 1) / 25
-
-            # For RL, there are no direct targets to set. This is filler (neutral)
-            # until the agent sends an action.
-            df["&-action"] = 0
-
-        return df
+        return dataframe
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
 
@@ -128,15 +88,21 @@ class FreqaiExampleRLStrategy(IStrategy):
         return dataframe
 
     def populate_entry_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
-
-        enter_long_conditions = [df["do_predict"] == 1, df["&-action"] == 1]
+        # 添加入场做多信号
+        enter_long_conditions = [
+            df["do_predict"] == 1,
+            df["&-s_close"] > df[f"target_roi_{self.std_dev_multiplier_buy.value}"],
+            ]
 
         if enter_long_conditions:
             df.loc[
                 reduce(lambda x, y: x & y, enter_long_conditions), ["enter_long", "enter_tag"]
             ] = (1, "long")
-
-        enter_short_conditions = [df["do_predict"] == 1, df["&-action"] == 3]
+        # 添加入场做空信号
+        enter_short_conditions = [
+            df["do_predict"] == 1,
+            df["&-s_close"] < df[f"sell_roi_{self.std_dev_multiplier_sell.value}"],
+            ]
 
         if enter_short_conditions:
             df.loc[
@@ -146,12 +112,47 @@ class FreqaiExampleRLStrategy(IStrategy):
         return df
 
     def populate_exit_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
-        exit_long_conditions = [df["do_predict"] == 1, df["&-action"] == 2]
+        # 添加做多离场信号
+        exit_long_conditions = [
+            df["do_predict"] == 1,
+            df["&-s_close"] < df[f"sell_roi_{self.std_dev_multiplier_sell.value}"] * 0.25,
+            ]
         if exit_long_conditions:
             df.loc[reduce(lambda x, y: x & y, exit_long_conditions), "exit_long"] = 1
-
-        exit_short_conditions = [df["do_predict"] == 1, df["&-action"] == 4]
+        # 添加做空离场信号
+        exit_short_conditions = [
+            df["do_predict"] == 1,
+            df["&-s_close"] > df[f"target_roi_{self.std_dev_multiplier_buy.value}"] * 0.25,
+            ]
         if exit_short_conditions:
             df.loc[reduce(lambda x, y: x & y, exit_short_conditions), "exit_short"] = 1
 
         return df
+
+    def confirm_trade_entry(
+        self,
+        pair: str,
+        order_type: str,
+        amount: float,
+        rate: float,
+        time_in_force: str,
+        current_time,
+        entry_tag,
+        side: str,
+        **kwargs,
+    ) -> bool:
+        # 自定义确认交易结果
+
+        # 获取最新的K线数据
+        df, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
+        last_candle = df.iloc[-1].squeeze()
+        # 如果当前交易方向为做多, 且委托价格大于最新收盘价的1.0025倍则不交易
+        if side == "long":
+            if rate > (last_candle["close"] * (1 + 0.0025)):
+                return False
+        # 如果当前交易方向为做空, 且委托价格小于最新收盘价的0.9975倍则不交易
+        else:
+            if rate < (last_candle["close"] * (1 - 0.0025)):
+                return False
+
+        return True
