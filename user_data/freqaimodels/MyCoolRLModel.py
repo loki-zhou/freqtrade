@@ -21,6 +21,10 @@ class MyCoolRLModel(ReinforcementLearner):
         sets a custom reward based on profit and trade duration.
         """
 
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            #self.render_mode = "human"
+
         def calculate_reward(self, action: int) -> float:
             """
             An example reward function. This is the one function that users will likely
@@ -93,6 +97,8 @@ class MyCoolRLModel(ReinforcementLearner):
 
             return True
 
+
+
         def step(self, action: int):
             """
             Logic for a single step (incrementing one candle in time)
@@ -105,9 +111,9 @@ class MyCoolRLModel(ReinforcementLearner):
                 _done = if the agent "died" or if the candles finished
                 info = dict passed back to openai gym lib
             """
-            validaction = self._is_valid(action)
             self._done = False
             self._current_tick += 1
+            validaction = self._is_valid(action)
 
             if self._current_tick == self._end_tick:
                 self._done = True
@@ -168,12 +174,15 @@ class MyCoolRLModel(ReinforcementLearner):
             )
 
             observation = self._get_observation()
+            # user can play with time if they want
+            truncated = False
 
             self._update_history(info)
 
-            return observation, step_reward, self._done, info
+            return observation, step_reward, self._done, truncated, info
 
-        def render(self, mode="human"):
+
+        def render(self):
 
             def transform_y_offset(ax, offset):
                     return mtransforms.offset_copy(

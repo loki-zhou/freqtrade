@@ -5,7 +5,6 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import HParam
 from stable_baselines3.common.vec_env import VecEnv
 
-from freqtrade.freqai.RL.BaseEnvironment import BaseActions, BaseEnvironment
 from stable_baselines3.common.logger import Figure
 from freqtrade.freqai.RL.BaseEnvironment import BaseActions
 
@@ -16,7 +15,7 @@ class TensorboardCallback(BaseCallback):
     episodic summary reports.
     """
     # Override training_env type to fix type errors
-    training_env: Union[VecEnv, None] = None
+    #training_env: Union[VecEnv, None] = None
 
     def __init__(self, verbose=1, actions: Type[Enum] = BaseActions):
         super().__init__(verbose)
@@ -25,13 +24,13 @@ class TensorboardCallback(BaseCallback):
         self.actions: Type[Enum] = actions
 
     def _on_rollout_end(self) -> None:
-        figure = self.training_env.render()
+        figure = self.training_env.envs[0].render()
         self.logger.record(
             "rollout/positions",
             Figure(figure, close=True),
             exclude=("stdout", "log", "json", "csv")
         )
-        return True
+        return
 
     def _on_training_start(self) -> None:
         hparam_dict = {
