@@ -3,20 +3,25 @@ from typing import Any, Dict, Type, Union
 
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import HParam
+from stable_baselines3.common.vec_env import VecEnv
 
 from freqtrade.freqai.RL.BaseEnvironment import BaseActions, BaseEnvironment
 from stable_baselines3.common.logger import Figure
+from freqtrade.freqai.RL.BaseEnvironment import BaseActions
+
 
 class TensorboardCallback(BaseCallback):
     """
     Custom callback for plotting additional values in tensorboard and
     episodic summary reports.
     """
+    # Override training_env type to fix type errors
+    training_env: Union[VecEnv, None] = None
+
     def __init__(self, verbose=1, actions: Type[Enum] = BaseActions):
         super().__init__(verbose)
         self.model: Any = None
-        self.logger = None  # type: Any
-        self.training_env: BaseEnvironment = None  # type: ignore
+        self.logger: Any = None
         self.actions: Type[Enum] = actions
 
     def _on_rollout_end(self) -> None:
@@ -53,6 +58,8 @@ class TensorboardCallback(BaseCallback):
     def _on_step(self) -> bool:
 
         local_info = self.locals["infos"][0]
+        if self.training_env is None:
+            return True
         tensorboard_metrics = self.training_env.get_attr("tensorboard_metrics")[0]
 
         for metric in local_info:
@@ -64,5 +71,3 @@ class TensorboardCallback(BaseCallback):
                 self.logger.record(f"{category}/{metric}", tensorboard_metrics[category][metric])
 
         return True
-
-
