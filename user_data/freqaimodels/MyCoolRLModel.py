@@ -76,6 +76,103 @@ class MyCoolRLModel(ReinforcementLearner):
 
             return 0.
 
+        def _is_valid(self, action: int) -> bool:
+            if action == Actions.Short_exit.value:
+                if self._position != Positions.Short:
+                    return False
+
+            if action == Actions.Long_exit.value:
+                if self._position != Positions.Long:
+                    return False
+
+
+            # Agent should only try to enter if it is not in position
+            if action in (Actions.Short_enter.value, Actions.Long_enter.value):
+                if self._position != Positions.Neutral:
+                    return False
+
+            return True
+
+        def step(self, action: int):
+            """
+            Logic for a single step (incrementing one candle in time)
+            by the agent
+            :param: action: int = the action type that the agent plans
+                to take for the current step.
+            :returns:
+                observation = current state of environment
+                step_reward = the reward from `calculate_reward()`
+                _done = if the agent "died" or if the candles finished
+                info = dict passed back to openai gym lib
+            """
+            validaction = self._is_valid(action)
+            self._done = False
+            self._current_tick += 1
+
+            if self._current_tick == self._end_tick:
+                self._done = True
+
+            self._update_unrealized_total_profit()
+            step_reward = self.calculate_reward(action)
+            self.total_reward += step_reward
+            if validaction:
+                self.tensorboard_log(self.actions._member_names_[action], category="actions")
+
+            trade_type = None
+            if self.is_tradesignal(action):
+
+                if action == Actions.Neutral.value:
+                    self._position = Positions.Neutral
+                    trade_type = "neutral"
+                    self._last_trade_tick = None
+                elif action == Actions.Long_enter.value:
+                    self._position = Positions.Long
+                    trade_type = "enter_long"
+                    self._last_trade_tick = self._current_tick
+                elif action == Actions.Short_enter.value:
+                    self._position = Positions.Short
+                    trade_type = "enter_short"
+                    self._last_trade_tick = self._current_tick
+                elif action == Actions.Long_exit.value:
+                    self._update_total_profit()
+                    self._position = Positions.Neutral
+                    trade_type = "exit_long"
+                    self._last_trade_tick = None
+                elif action == Actions.Short_exit.value:
+                    self._update_total_profit()
+                    self._position = Positions.Neutral
+                    trade_type = "exit_short"
+                    self._last_trade_tick = None
+                else:
+                    print("case not defined")
+
+                if trade_type is not None:
+                    self.trade_history.append(
+                        {'price': self.current_price(), 'index': self._current_tick,
+                         'type': trade_type, 'profit': self.get_unrealized_profit()})
+
+            if (self._total_profit < self.max_drawdown or
+                    self._total_unrealized_profit < self.max_drawdown):
+                self._done = True
+
+            self._position_history.append(self._position)
+
+            info = dict(
+                tick=self._current_tick,
+                action=action,
+                total_reward=self.total_reward,
+                total_profit=self._total_profit,
+                position=self._position.value,
+                trade_duration=self.get_trade_duration(),
+                current_profit_pct=self.get_unrealized_profit()
+            )
+
+            observation = self._get_observation()
+
+            self._update_history(info)
+
+            return observation, step_reward, self._done, info
+
         def render(self, mode="human"):
 
             def transform_y_offset(ax, offset):
@@ -122,9 +219,9 @@ class MyCoolRLModel(ReinforcementLearner):
             plot_markers(axs[0], history.loc[history["type"] == "enter_long"]
                         ["price"], "^", "#4ae747", 7, -0.1)
             plot_markers(axs[0], history.loc[history["type"] == "exit_long"]
-                        ["price"], "<", "#4ae747", 5, 0)
+                        ["price"], "o", "#4ae747", 5, 0)
             plot_markers(axs[0], history.loc[history["type"] == "exit_short"]
-                        ["price"], ">", "#f53580", 5, 0)
+                        ["price"], "o", "#f53580", 5, 0)
 
             axs[1].plot(history["position"], linewidth=1, color="#a29db9")
             axs[1].set_ylabel("position")
