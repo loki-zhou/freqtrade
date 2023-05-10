@@ -8,12 +8,17 @@ from freqtrade.freqai.RL.Base5ActionRLEnv import Actions, Base5ActionRLEnv, Posi
 import matplotlib.pyplot as plt
 import matplotlib.transforms as mtransforms
 
+from FigureRecorderCallback import FigureRecorderCallback
+from freqtrade.freqai.RL.BaseEnvironment import BaseActions
+
 logger = logging.getLogger(__name__)
 
 class MyCoolRLModel(ReinforcementLearner):
     """
     User created Reinforcement Learning Model prediction model.
     """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     class MyRLEnv(Base5ActionRLEnv):
         """
@@ -24,6 +29,67 @@ class MyCoolRLModel(ReinforcementLearner):
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
             #self.render_mode = "human"
+
+        def calculate_rewardv2(self, action: int) -> float:
+            """
+            An example reward function. This is the one function that users will likely
+            wish to inject their own creativity into.
+            :param action: int = The action made by the agent for the current candle.
+            :return:
+            float = the reward to give to the agent for current step (used for optimization
+                of weights in NN)
+            """
+            # first, penalize if the action is not valid
+            if not self._is_valid(action):
+                self.tensorboard_log("invalid", category="actions")
+                return -200
+
+            pnl = self.get_unrealized_profit()
+            factor = 100.
+
+            # reward agent for entering trades
+            if (action == Actions.Long_enter.value
+                    and self._position == Positions.Neutral):
+                return 25
+            if (action == Actions.Short_enter.value
+                    and self._position == Positions.Neutral):
+                return 25
+            # discourage agent from not entering trades
+            # if action == Actions.Neutral.value and self._position == Positions.Neutral:
+            #     return -1
+            if action == Actions.Neutral.value or self._position == Positions.Neutral:
+                return 0
+
+            max_trade_duration = self.rl_config.get('max_trade_duration_candles', 300)
+
+            trade_duration = self._current_tick - self._last_trade_tick  # type: ignore
+
+            if trade_duration <= max_trade_duration:
+                factor *= 1.5
+            elif trade_duration > max_trade_duration:
+                factor *= 0.5
+
+            # discourage sitting in position
+            # if (self._position in (Positions.Short, Positions.Long) and
+            #         action == Actions.Neutral.value):
+            #     return -1 * trade_duration / max_trade_duration
+
+
+            # close long
+            if action == Actions.Long_exit.value and self._position == Positions.Long:
+                # if pnl > self.profit_aim * self.rr:
+                #     factor *= self.rl_config['model_reward_parameters'].get('win_reward_factor', 2)
+                factor *= self.rl_config['model_reward_parameters'].get('win_reward_factor', 2)
+                return float(pnl * factor)
+
+            # close short
+            if action == Actions.Short_exit.value and self._position == Positions.Short:
+                # if pnl > self.profit_aim * self.rr:
+                #     factor *= self.rl_config['model_reward_parameters'].get('win_reward_factor', 2)
+                factor *= self.rl_config['model_reward_parameters'].get('win_reward_factor', 2)
+                return float(pnl * factor)
+
+            return 0.
 
         def calculate_reward(self, action: int) -> float:
             """
@@ -49,6 +115,12 @@ class MyCoolRLModel(ReinforcementLearner):
             if (action == Actions.Short_enter.value
                     and self._position == Positions.Neutral):
                 return 25
+            # if (action == Actions.Long_enter.value
+            #         and self._position == Positions.Neutral):
+            #     return 1
+            # if (action == Actions.Short_enter.value
+            #         and self._position == Positions.Neutral):
+            #     return 1
             # discourage agent from not entering trades
             if action == Actions.Neutral.value and self._position == Positions.Neutral:
                 return -1
@@ -60,6 +132,7 @@ class MyCoolRLModel(ReinforcementLearner):
                 factor *= 1.5
             elif trade_duration > max_trade_duration:
                 factor *= 0.5
+            #factor *= 5
 
             # discourage sitting in position
             if (self._position in (Positions.Short, Positions.Long) and

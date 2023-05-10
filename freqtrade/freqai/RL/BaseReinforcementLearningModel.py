@@ -115,7 +115,7 @@ class BaseReinforcementLearningModel(IFreqaiModel):
         # normalize all data based on train_dataset only
         prices_train, prices_test = self.build_ohlc_price_dataframes(dk.data_dictionary, pair, dk)
 
-        data_dictionary = dk.normalize_data(data_dictionary)
+        #data_dictionary = dk.normalize_data(data_dictionary)
 
         # data cleaning/analysis
         self.data_cleaning_train(dk)
@@ -238,7 +238,7 @@ class BaseReinforcementLearningModel(IFreqaiModel):
 
         filtered_dataframe = self.drop_ohlc_from_df(filtered_dataframe, dk)
 
-        filtered_dataframe = dk.normalize_data_from_metadata(filtered_dataframe)
+        #filtered_dataframe = dk.normalize_data_from_metadata(filtered_dataframe)
         dk.data_dictionary["prediction_features"] = filtered_dataframe
 
         # optional additional data cleaning/analysis

@@ -88,7 +88,8 @@
             "policy_type": "MlpPolicy",
             "model_reward_parameters": {
                 "rr": 1,
-                "profit_aim": 0.025
+                "profit_aim": 0.025,
+                "win_reward_factor": 100
             },
             "save_backtest_models": true
         }
