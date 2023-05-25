@@ -7,7 +7,6 @@ from datetime import date, datetime, timedelta, timezone
 from math import isnan
 from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, Union
 
-import arrow
 import psutil
 from dateutil.relativedelta import relativedelta
 from dateutil.tz import tzlocal
@@ -26,12 +25,13 @@ from freqtrade.exceptions import ExchangeError, PricingError
 from freqtrade.exchange import timeframe_to_minutes, timeframe_to_msecs
 from freqtrade.exchange.types import Tickers
 from freqtrade.loggers import bufferHandler
-from freqtrade.misc import decimals_per_coin, shorten_date
+from freqtrade.misc import decimals_per_coin
 from freqtrade.persistence import KeyStoreKeys, KeyValueStore, Order, PairLocks, Trade
 from freqtrade.persistence.models import PairLock
 from freqtrade.plugins.pairlist.pairlist_helpers import expand_pairlist
 from freqtrade.rpc.fiat_convert import CryptoToFiatConverter
 from freqtrade.rpc.rpc_types import RPCSendMsg
+from freqtrade.util import dt_humanize, dt_now, shorten_date
 from freqtrade.wallets import PositionWallet, Wallet
 
 
@@ -292,7 +292,7 @@ class RPC:
                                   and open_order.ft_order_side == trade.entry_side) else '')
                     + ('**' if (open_order and
                                 open_order.ft_order_side == trade.exit_side is not None) else ''),
-                    shorten_date(arrow.get(trade.open_date).humanize(only_distance=True)),
+                    shorten_date(dt_humanize(trade.open_date, only_distance=True)),
                     profit_str
                 ]
                 if self._config.get('position_adjustment_enable', False):
@@ -540,8 +540,8 @@ class RPC:
             fiat_display_currency
         ) if self._fiat_converter else 0
 
-        first_date = trades[0].open_date if trades else None
-        last_date = trades[-1].open_date if trades else None
+        first_date = trades[0].open_date_utc if trades else None
+        last_date = trades[-1].open_date_utc if trades else None
         num = float(len(durations) or 1)
         bot_start = KeyValueStore.get_datetime_value(KeyStoreKeys.BOT_START_TIME)
         return {
@@ -563,9 +563,11 @@ class RPC:
             'profit_all_fiat': profit_all_fiat,
             'trade_count': len(trades),
             'closed_trade_count': len([t for t in trades if not t.is_open]),
-            'first_trade_date': arrow.get(first_date).humanize() if first_date else '',
+            'first_trade_date': first_date.strftime(DATETIME_PRINT_FORMAT) if first_date else '',
+            'first_trade_humanized': dt_humanize(first_date) if first_date else '',
             'first_trade_timestamp': int(first_date.timestamp() * 1000) if first_date else 0,
-            'latest_trade_date': arrow.get(last_date).humanize() if last_date else '',
+            'latest_trade_date': last_date.strftime(DATETIME_PRINT_FORMAT) if last_date else '',
+            'latest_trade_humanized': dt_humanize(last_date) if last_date else '',
             'latest_trade_timestamp': int(last_date.timestamp() * 1000) if last_date else 0,
             'avg_duration': str(timedelta(seconds=sum(durations) / num)).split('.')[0],
             'best_pair': best_pair[0] if best_pair else '',
@@ -739,6 +741,18 @@ class RPC:
             self._freqtrade.strategy.max_open_trades = 0
 
         return {'status': 'No more entries will occur from now. Run /reload_config to reset.'}
+
+    def _rpc_reload_trade_from_exchange(self, trade_id: int) -> Dict[str, str]:
+        """
+        Handler for reload_trade_from_exchange.
+        Reloads a trade from it's orders, should manual interaction have happened.
+        """
+        trade = Trade.get_trades(trade_filter=[Trade.id == trade_id]).first()
+        if not trade:
+            raise RPCException(f"Could not find trade with id {trade_id}.")
+
+        self._freqtrade.handle_onexchange_order(trade)
+        return {'status': 'Reloaded from orders from exchange'}
 
     def __exec_force_exit(self, trade: Trade, ordertype: Optional[str],
                           amount: Optional[float] = None) -> None:
@@ -1238,7 +1252,7 @@ class RPC:
         df_analyzed = strategy.analyze_ticker(_data[pair], {'pair': pair})
 
         return RPC._convert_dataframe_to_dict(strategy.get_strategy_name(), pair, timeframe,
-                                              df_analyzed, arrow.Arrow.utcnow().datetime)
+                                              df_analyzed, dt_now())
 
     def _rpc_plot_config(self) -> Dict[str, Any]:
         if (self._freqtrade.strategy.plot_config and

@@ -32,8 +32,7 @@ class PyTorchTransformerRegressor(BasePyTorchRegressor):
                 "trainer_kwargs": {
                     "max_iters": 5000,
                     "batch_size": 64,
-                    "max_n_eval_batches": null,
-                    "window_size": 10
+                    "max_n_eval_batches": null
                 },
                 "model_kwargs": {
                     "hidden_dim": 512,
@@ -75,17 +74,19 @@ class PyTorchTransformerRegressor(BasePyTorchRegressor):
         model.to(self.device)
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate)
         criterion = torch.nn.MSELoss()
-        init_model = self.get_init_model(dk.pair)
-        trainer = PyTorchTransformerTrainer(
-            model=model,
-            optimizer=optimizer,
-            criterion=criterion,
-            device=self.device,
-            init_model=init_model,
-            data_convertor=self.data_convertor,
-            window_size=self.window_size,
-            **self.trainer_kwargs,
-        )
+        # check if continual_learning is activated, and retreive the model to continue training
+        trainer = self.get_init_model(dk.pair)
+        if trainer is None:
+            trainer = PyTorchTransformerTrainer(
+                model=model,
+                optimizer=optimizer,
+                criterion=criterion,
+                device=self.device,
+                data_convertor=self.data_convertor,
+                window_size=self.window_size,
+                tb_logger=self.tb_logger,
+                **self.trainer_kwargs,
+            )
         trainer.fit(data_dictionary, self.splits)
         return trainer
 
@@ -118,11 +119,11 @@ class PyTorchTransformerRegressor(BasePyTorchRegressor):
         x = x.unsqueeze(0)
         # create empty torch tensor
         self.model.model.eval()
-        yb = torch.empty(0)
+        yb = torch.empty(0).to(self.device)
         if x.shape[1] > 1:
             ws = self.window_size
             for i in range(0, x.shape[1] - ws):
-                xb = x[:, i:i + ws, :]
+                xb = x[:, i:i + ws, :].to(self.device)
                 y = self.model.model(xb)
                 yb = torch.cat((yb, y), dim=0)
         else:
