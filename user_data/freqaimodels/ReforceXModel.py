@@ -20,7 +20,7 @@ from freqtrade.freqai.data_kitchen import FreqaiDataKitchen
 from freqtrade.freqai.RL.Base5ActionRLEnv import Actions, Base5ActionRLEnv, Positions
 from freqtrade.freqai.RL.BaseEnvironment import BaseEnvironment
 from freqtrade.freqai.RL.BaseReinforcementLearningModel import BaseReinforcementLearningModel, make_env
-from freqtrade.freqai.RL.TensorboardCallback import TensorboardCallback
+from freqtrade.freqai.tensorboard.TensorboardCallback import TensorboardCallback
 
 
 logger = logging.getLogger(__name__)

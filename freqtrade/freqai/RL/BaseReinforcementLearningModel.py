@@ -238,7 +238,7 @@ class BaseReinforcementLearningModel(IFreqaiModel):
 
         filtered_dataframe = self.drop_ohlc_from_df(filtered_dataframe, dk)
 
-        #filtered_dataframe = dk.normalize_data_from_metadata(filtered_dataframe)
+        filtered_dataframe = dk.normalize_data_from_metadata(filtered_dataframe)
         dk.data_dictionary["prediction_features"] = filtered_dataframe
 
         # optional additional data cleaning/analysis
@@ -285,7 +285,6 @@ class BaseReinforcementLearningModel(IFreqaiModel):
         train_df = data_dictionary["train_features"]
         test_df = data_dictionary["test_features"]
 
-        # %-raw_volume_gen_shift-2_ETH/USDT_1h
         # price data for model training and evaluation
         tf = self.config['timeframe']
         rename_dict = {'%-raw_open': 'open', '%-raw_low': 'low',

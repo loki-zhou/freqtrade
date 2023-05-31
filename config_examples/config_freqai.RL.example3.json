@@ -95,8 +95,7 @@
                 "profit_aim": 10
             },
             "save_backtest_models": true,
-            "drop_ohlc_from_features": true,
-            // ReforceX
+            "drop_ohlc_from_features": false,
             "force_exits": false,
             "lr_schedule": false,
             "tensorboard_plot": true,
