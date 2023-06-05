@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
-import gym
+import gymnasium as gym
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
@@ -16,14 +16,14 @@ from pandas import DataFrame
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.utils import set_random_seed
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 
 from freqtrade.exceptions import OperationalException
 from freqtrade.freqai.data_kitchen import FreqaiDataKitchen
 from freqtrade.freqai.freqai_interface import IFreqaiModel
 from freqtrade.freqai.RL.Base5ActionRLEnv import Actions, Base5ActionRLEnv
-from freqtrade.freqai.RL.BaseEnvironment import BaseActions, Positions
-from freqtrade.freqai.RL.TensorboardCallback import TensorboardCallback
+from freqtrade.freqai.RL.BaseEnvironment import BaseActions, BaseEnvironment, Positions
+from freqtrade.freqai.tensorboard.TensorboardCallback import TensorboardCallback
 from freqtrade.persistence import Trade
 
 
@@ -46,8 +46,8 @@ class BaseReinforcementLearningModel(IFreqaiModel):
             'cpu_count', 1), max(int(self.max_system_threads / 2), 1))
         th.set_num_threads(self.max_threads)
         self.reward_params = self.freqai_info['rl_config']['model_reward_parameters']
-        self.train_env: Union[SubprocVecEnv, Type[gym.Env]] = gym.Env()
-        self.eval_env: Union[SubprocVecEnv, Type[gym.Env]] = gym.Env()
+        self.train_env: Union[VecMonitor, SubprocVecEnv, gym.Env] = gym.Env()
+        self.eval_env: Union[VecMonitor, SubprocVecEnv, gym.Env] = gym.Env()
         self.eval_callback: Optional[EvalCallback] = None
         self.model_type = self.freqai_info['rl_config']['model_type']
         self.rl_config = self.freqai_info['rl_config']
@@ -114,6 +114,7 @@ class BaseReinforcementLearningModel(IFreqaiModel):
 
         # normalize all data based on train_dataset only
         prices_train, prices_test = self.build_ohlc_price_dataframes(dk.data_dictionary, pair, dk)
+
         data_dictionary = dk.normalize_data(data_dictionary)
 
         # data cleaning/analysis
@@ -148,12 +149,8 @@ class BaseReinforcementLearningModel(IFreqaiModel):
 
         env_info = self.pack_env_dict(dk.pair)
 
-        self.train_env = self.MyRLEnv(df=train_df,
-                                      prices=prices_train,
-                                      **env_info)
-        self.eval_env = Monitor(self.MyRLEnv(df=test_df,
-                                             prices=prices_test,
-                                             **env_info))
+        self.train_env = self.MyRLEnv(df=train_df, prices=prices_train, **env_info)
+        self.eval_env = Monitor(self.MyRLEnv(df=test_df, prices=prices_test, **env_info))
         self.eval_callback = EvalCallback(self.eval_env, deterministic=True,
                                           render=False, eval_freq=len(train_df),
                                           best_model_save_path=str(dk.data_path))
@@ -238,6 +235,9 @@ class BaseReinforcementLearningModel(IFreqaiModel):
         filtered_dataframe, _ = dk.filter_features(
             unfiltered_df, dk.training_features_list, training_filter=False
         )
+
+        filtered_dataframe = self.drop_ohlc_from_df(filtered_dataframe, dk)
+
         filtered_dataframe = dk.normalize_data_from_metadata(filtered_dataframe)
         dk.data_dictionary["prediction_features"] = filtered_dataframe
 
@@ -285,7 +285,6 @@ class BaseReinforcementLearningModel(IFreqaiModel):
         train_df = data_dictionary["train_features"]
         test_df = data_dictionary["test_features"]
 
-        # %-raw_volume_gen_shift-2_ETH/USDT_1h
         # price data for model training and evaluation
         tf = self.config['timeframe']
         rename_dict = {'%-raw_open': 'open', '%-raw_low': 'low',
@@ -318,7 +317,23 @@ class BaseReinforcementLearningModel(IFreqaiModel):
         prices_test.rename(columns=rename_dict, inplace=True)
         prices_test.reset_index(drop=True)
 
+        train_df = self.drop_ohlc_from_df(train_df, dk)
+        test_df = self.drop_ohlc_from_df(test_df, dk)
+
         return prices_train, prices_test
+
+    def drop_ohlc_from_df(self, df: DataFrame, dk: FreqaiDataKitchen):
+        """
+        Given a dataframe, drop the ohlc data
+        """
+        drop_list = ['%-raw_open', '%-raw_low', '%-raw_high', '%-raw_close']
+
+        if self.rl_config["drop_ohlc_from_features"]:
+            df.drop(drop_list, axis=1, inplace=True)
+            feature_list = dk.training_features_list
+            dk.training_features_list = [e for e in feature_list if e not in drop_list]
+
+        return df
 
     def load_model_from_disk(self, dk: FreqaiDataKitchen) -> Any:
         """
@@ -356,6 +371,12 @@ class BaseReinforcementLearningModel(IFreqaiModel):
             """
             An example reward function. This is the one function that users will likely
             wish to inject their own creativity into.
+
+            Warning!
+            This is function is a showcase of functionality designed to show as many possible
+            environment control features as possible. It is also designed to run quickly
+            on small computers. This is a benchmark, it is *not* for live production.
+
             :param action: int = The action made by the agent for the current candle.
             :return:
             float = the reward to give to the agent for current step (used for optimization
@@ -416,9 +437,8 @@ class BaseReinforcementLearningModel(IFreqaiModel):
             return 0.
 
 
-def make_env(MyRLEnv: Type[gym.Env], env_id: str, rank: int,
+def make_env(MyRLEnv: Type[BaseEnvironment], env_id: str, rank: int,
              seed: int, train_df: DataFrame, price: DataFrame,
-             monitor: bool = False,
              env_info: Dict[str, Any] = {}) -> Callable:
     """
     Utility function for multiprocessed env.
@@ -435,8 +455,7 @@ def make_env(MyRLEnv: Type[gym.Env], env_id: str, rank: int,
 
         env = MyRLEnv(df=train_df, prices=price, id=env_id, seed=seed + rank,
                       **env_info)
-        if monitor:
-            env = Monitor(env)
+
         return env
     set_random_seed(seed)
     return _init

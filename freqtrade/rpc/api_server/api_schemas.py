@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from freqtrade.constants import DATETIME_PRINT_FORMAT, IntOrInf
 from freqtrade.enums import OrderTypeValues, SignalDirection, TradingMode
+from freqtrade.types import ValidExchangesType
 
 
 class Ping(BaseModel):
@@ -36,20 +37,25 @@ class Balance(BaseModel):
     free: float
     balance: float
     used: float
+    bot_owned: Optional[float]
     est_stake: float
+    est_stake_bot: Optional[float]
     stake: str
     # Starting with 2.x
     side: str
     leverage: float
     is_position: bool
     position: float
+    is_bot_managed: bool
 
 
 class Balances(BaseModel):
     currencies: List[Balance]
     total: float
+    total_bot: float
     symbol: str
     value: float
+    value_bot: float
     stake: str
     note: str
     starting_capital: float
@@ -95,8 +101,10 @@ class Profit(BaseModel):
     trade_count: int
     closed_trade_count: int
     first_trade_date: str
+    first_trade_humanized: str
     first_trade_timestamp: int
     latest_trade_date: str
+    latest_trade_humanized: str
     latest_trade_timestamp: int
     avg_duration: str
     best_pair: str
@@ -108,6 +116,8 @@ class Profit(BaseModel):
     max_drawdown: float
     max_drawdown_abs: float
     trading_volume: Optional[float]
+    bot_start_timestamp: int
+    bot_start_date: str
 
 
 class SellReason(BaseModel):
@@ -250,6 +260,7 @@ class TradeSchema(BaseModel):
     profit_fiat: Optional[float]
 
     realized_profit: float
+    realized_profit_ratio: Optional[float]
 
     exit_reason: Optional[str]
     exit_order_status: Optional[str]
@@ -275,6 +286,10 @@ class TradeSchema(BaseModel):
     funding_fees: Optional[float]
     trading_mode: Optional[TradingMode]
 
+    amount_precision: Optional[float]
+    price_precision: Optional[float]
+    precision_mode: Optional[int]
+
 
 class OpenTradeSchema(TradeSchema):
     stoploss_current_dist: Optional[float]
@@ -285,6 +300,7 @@ class OpenTradeSchema(TradeSchema):
     current_rate: float
     total_profit_abs: float
     total_profit_fiat: Optional[float]
+    total_profit_ratio: Optional[float]
 
     open_order: Optional[str]
 
@@ -309,7 +325,7 @@ class LockModel(BaseModel):
     lock_timestamp: int
     pair: str
     side: str
-    reason: str
+    reason: Optional[str]
 
 
 class Locks(BaseModel):
@@ -379,6 +395,10 @@ class PlotConfig(BaseModel):
 
 class StrategyListResponse(BaseModel):
     strategies: List[str]
+
+
+class ExchangeListResponse(BaseModel):
+    exchanges: List[ValidExchangesType]
 
 
 class FreqAIModelListResponse(BaseModel):
