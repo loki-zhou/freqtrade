@@ -641,7 +641,7 @@ def test_get_ui_download_url_direct(mocker):
 
 
 def test_download_data_keyboardInterrupt(mocker, markets):
-    dl_mock = mocker.patch('freqtrade.commands.data_commands.refresh_backtest_ohlcv_data',
+    dl_mock = mocker.patch('freqtrade.commands.data_commands.download_data_main',
                            MagicMock(side_effect=KeyboardInterrupt))
     patch_exchange(mocker)
     mocker.patch(f'{EXMS}.markets', PropertyMock(return_value=markets))
@@ -660,7 +660,7 @@ def test_download_data_keyboardInterrupt(mocker, markets):
 
 
 def test_download_data_timerange(mocker, markets):
-    dl_mock = mocker.patch('freqtrade.commands.data_commands.refresh_backtest_ohlcv_data',
+    dl_mock = mocker.patch('freqtrade.data.history.history_utils.refresh_backtest_ohlcv_data',
                            MagicMock(return_value=["ETH/BTC", "XRP/BTC"]))
     patch_exchange(mocker)
     mocker.patch(f'{EXMS}.markets', PropertyMock(return_value=markets))
@@ -708,10 +708,10 @@ def test_download_data_timerange(mocker, markets):
 
 
 def test_download_data_no_markets(mocker, caplog):
-    dl_mock = mocker.patch('freqtrade.commands.data_commands.refresh_backtest_ohlcv_data',
+    dl_mock = mocker.patch('freqtrade.data.history.history_utils.refresh_backtest_ohlcv_data',
                            MagicMock(return_value=["ETH/BTC", "XRP/BTC"]))
     patch_exchange(mocker, id='binance')
-    mocker.patch(f'{EXMS}.markets', PropertyMock(return_value={}))
+    mocker.patch(f'{EXMS}.get_markets', return_value={})
     args = [
         "download-data",
         "--exchange", "binance",
@@ -723,11 +723,11 @@ def test_download_data_no_markets(mocker, caplog):
     assert log_has("Pairs [ETH/BTC,XRP/BTC] not available on exchange Binance.", caplog)
 
 
-def test_download_data_no_exchange(mocker, caplog):
-    mocker.patch('freqtrade.commands.data_commands.refresh_backtest_ohlcv_data',
+def test_download_data_no_exchange(mocker):
+    mocker.patch('freqtrade.data.history.history_utils.refresh_backtest_ohlcv_data',
                  MagicMock(return_value=["ETH/BTC", "XRP/BTC"]))
     patch_exchange(mocker)
-    mocker.patch(f'{EXMS}.markets', PropertyMock(return_value={}))
+    mocker.patch(f'{EXMS}.get_markets', return_value={})
     args = [
         "download-data",
     ]
@@ -740,7 +740,7 @@ def test_download_data_no_exchange(mocker, caplog):
 
 def test_download_data_no_pairs(mocker):
 
-    mocker.patch('freqtrade.commands.data_commands.refresh_backtest_ohlcv_data',
+    mocker.patch('freqtrade.data.history.history_utils.refresh_backtest_ohlcv_data',
                  MagicMock(return_value=["ETH/BTC", "XRP/BTC"]))
     patch_exchange(mocker)
     mocker.patch(f'{EXMS}.markets', PropertyMock(return_value={}))
@@ -758,7 +758,7 @@ def test_download_data_no_pairs(mocker):
 
 def test_download_data_all_pairs(mocker, markets):
 
-    dl_mock = mocker.patch('freqtrade.commands.data_commands.refresh_backtest_ohlcv_data',
+    dl_mock = mocker.patch('freqtrade.data.history.history_utils.refresh_backtest_ohlcv_data',
                            MagicMock(return_value=["ETH/BTC", "XRP/BTC"]))
     patch_exchange(mocker)
     mocker.patch(f'{EXMS}.markets', PropertyMock(return_value=markets))
@@ -792,13 +792,13 @@ def test_download_data_all_pairs(mocker, markets):
     assert set(dl_mock.call_args_list[0][1]['pairs']) == expected
 
 
-def test_download_data_trades(mocker, caplog):
-    dl_mock = mocker.patch('freqtrade.commands.data_commands.refresh_backtest_trades_data',
+def test_download_data_trades(mocker):
+    dl_mock = mocker.patch('freqtrade.data.history.history_utils.refresh_backtest_trades_data',
                            MagicMock(return_value=[]))
-    convert_mock = mocker.patch('freqtrade.commands.data_commands.convert_trades_to_ohlcv',
+    convert_mock = mocker.patch('freqtrade.data.history.history_utils.convert_trades_to_ohlcv',
                                 MagicMock(return_value=[]))
     patch_exchange(mocker)
-    mocker.patch(f'{EXMS}.markets', PropertyMock(return_value={}))
+    mocker.patch(f'{EXMS}.get_markets', return_value={})
     args = [
         "download-data",
         "--exchange", "kraken",
@@ -829,7 +829,7 @@ def test_download_data_trades(mocker, caplog):
 
 def test_download_data_data_invalid(mocker):
     patch_exchange(mocker, id="kraken")
-    mocker.patch(f'{EXMS}.markets', PropertyMock(return_value={}))
+    mocker.patch(f'{EXMS}.get_markets', return_value={})
     args = [
         "download-data",
         "--exchange", "kraken",
@@ -1389,8 +1389,6 @@ def test_convert_data_trades(mocker, testdatadir):
 def test_start_list_data(testdatadir, capsys):
     args = [
         "list-data",
-        "--data-format-ohlcv",
-        "json",
         "--datadir",
         str(testdatadir),
     ]
@@ -1398,14 +1396,14 @@ def test_start_list_data(testdatadir, capsys):
     pargs['config'] = None
     start_list_data(pargs)
     captured = capsys.readouterr()
-    assert "Found 17 pair / timeframe combinations." in captured.out
+    assert "Found 16 pair / timeframe combinations." in captured.out
     assert "\n|         Pair |       Timeframe |   Type |\n" in captured.out
     assert "\n| UNITTEST/BTC | 1m, 5m, 8m, 30m |   spot |\n" in captured.out
 
     args = [
         "list-data",
         "--data-format-ohlcv",
-        "json",
+        "feather",
         "--pairs", "XRP/ETH",
         "--datadir",
         str(testdatadir),
@@ -1421,8 +1419,6 @@ def test_start_list_data(testdatadir, capsys):
 
     args = [
         "list-data",
-        "--data-format-ohlcv",
-        "json",
         "--trading-mode", "futures",
         "--datadir",
         str(testdatadir),
@@ -1439,8 +1435,6 @@ def test_start_list_data(testdatadir, capsys):
 
     args = [
         "list-data",
-        "--data-format-ohlcv",
-        "json",
         "--pairs", "XRP/ETH",
         "--datadir",
         str(testdatadir),

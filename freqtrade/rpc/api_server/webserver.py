@@ -8,6 +8,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 
+from freqtrade.configuration import running_in_docker
 from freqtrade.constants import Config
 from freqtrade.exceptions import OperationalException
 from freqtrade.rpc.api_server.uvicorn_threaded import UvicornServer
@@ -114,10 +115,12 @@ class ApiServer(RPCHandler):
 
     def configure_app(self, app: FastAPI, config):
         from freqtrade.rpc.api_server.api_auth import http_basic_or_jwt_token, router_login
+        from freqtrade.rpc.api_server.api_background_tasks import router as api_bg_tasks
         from freqtrade.rpc.api_server.api_backtest import router as api_backtest
         from freqtrade.rpc.api_server.api_v1 import router as api_v1
         from freqtrade.rpc.api_server.api_v1 import router_public as api_v1_public
         from freqtrade.rpc.api_server.api_ws import router as ws_router
+        from freqtrade.rpc.api_server.deps import is_webserver_mode
         from freqtrade.rpc.api_server.web_ui import router_ui
 
         app.include_router(api_v1_public, prefix="/api/v1")
@@ -126,7 +129,12 @@ class ApiServer(RPCHandler):
                            dependencies=[Depends(http_basic_or_jwt_token)],
                            )
         app.include_router(api_backtest, prefix="/api/v1",
-                           dependencies=[Depends(http_basic_or_jwt_token)],
+                           dependencies=[Depends(http_basic_or_jwt_token),
+                                         Depends(is_webserver_mode)],
+                           )
+        app.include_router(api_bg_tasks, prefix="/api/v1",
+                           dependencies=[Depends(http_basic_or_jwt_token),
+                                         Depends(is_webserver_mode)],
                            )
         app.include_router(ws_router, prefix="/api/v1")
         app.include_router(router_login, prefix="/api/v1", tags=["auth"])
@@ -175,7 +183,7 @@ class ApiServer(RPCHandler):
         rest_port = self._config['api_server']['listen_port']
 
         logger.info(f'Starting HTTP Server at {rest_ip}:{rest_port}')
-        if not IPv4Address(rest_ip).is_loopback:
+        if not IPv4Address(rest_ip).is_loopback and not running_in_docker():
             logger.warning("SECURITY WARNING - Local Rest Server listening to external connections")
             logger.warning("SECURITY WARNING - This is insecure please set to your loopback,"
                            "e.g 127.0.0.1 in config.json")

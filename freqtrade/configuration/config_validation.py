@@ -51,6 +51,8 @@ def validate_config_schema(conf: Dict[str, Any], preliminary: bool = False) -> D
             conf_schema['required'] = constants.SCHEMA_BACKTEST_REQUIRED
         else:
             conf_schema['required'] = constants.SCHEMA_BACKTEST_REQUIRED_FINAL
+    elif conf.get('runmode', RunMode.OTHER) == RunMode.WEBSERVER:
+        conf_schema['required'] = constants.SCHEMA_MINIMAL_WEBSERVER
     else:
         conf_schema['required'] = constants.SCHEMA_MINIMAL_REQUIRED
     try:
@@ -174,7 +176,7 @@ def _validate_whitelist(conf: Dict[str, Any]) -> None:
         return
 
     for pl in conf.get('pairlists', [{'method': 'StaticPairList'}]):
-        if (pl.get('method') == 'StaticPairList'
+        if (isinstance(pl, dict) and pl.get('method') == 'StaticPairList'
                 and not conf.get('exchange', {}).get('pair_whitelist')):
             raise OperationalException("StaticPairList requires pair_whitelist to be set.")
 

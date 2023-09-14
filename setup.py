@@ -5,7 +5,7 @@ from setuptools import setup
 plot = ['plotly>=4.0']
 hyperopt = [
     'scipy',
-    'scikit-learn',
+    'scikit-learn<=1.1.3',
     'scikit-optimize>=0.7.0',
     'filelock',
 ]
@@ -16,7 +16,8 @@ freqai = [
     'catboost; platform_machine != "aarch64"',
     'lightgbm',
     'xgboost',
-    'tensorboard'
+    'tensorboard',
+    'datasieve>=0.1.5'
 ]
 
 freqai_rl = [
@@ -69,7 +70,7 @@ setup(
     ],
     install_requires=[
         # from requirements.txt
-        'ccxt>=3.0.0',
+        'ccxt>=4.0.0',
         'SQLAlchemy>=2.0.6',
         'python-telegram-bot>=20.1',
         'arrow>=1.0.0',
@@ -96,7 +97,7 @@ setup(
         'rich',
         'pyarrow; platform_machine != "armv7l"',
         'fastapi',
-        'pydantic>=1.8.0',
+        'pydantic>=2.2.0',
         'uvicorn',
         'psutil',
         'pyjwt',
@@ -107,7 +108,7 @@ setup(
         'ast-comments',
         'aiohttp',
         'cryptography',
-        'httpx',
+        'httpx>=0.24.1',
         'python-dateutil',
         'packaging',
     ],
