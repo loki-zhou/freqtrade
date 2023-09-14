@@ -26,7 +26,7 @@ from freqtrade.freqai.tensorboard.TensorboardCallback import TensorboardCallback
 logger = logging.getLogger(__name__)
 
 
-class ReforceXModel2(BaseReinforcementLearningModel):
+class MyReforceXModel(BaseReinforcementLearningModel):
     """
     Reinforcement learning prediction model.
 
@@ -339,66 +339,29 @@ class ReforceXModel2(BaseReinforcementLearningModel):
             float = the reward to give to the agent for current step (used for optimization
                 of weights in NN)
             """
-            # first, penalize if the action is not valid
             if not self._is_valid(action):
                 self.tensorboard_log("Invalid", category="actions")
-                return -1
+                return 0
+            step_reward = 0.
 
-            factor = 100.
+            if self._current_tick != None and self._last_trade_tick != None:
+                current_price = self.prices.iloc[self._current_tick].open
+                last_trade_price = self.prices.iloc[self._last_trade_tick].open
+                ratio = current_price / last_trade_price
+                cost = np.log((1 - self.fee) * (1 - self.fee))
 
-            # you can use feature values from dataframe
-            # rsi_now = self.get_feature_value("rsi", 16)
+                if action == Actions.Short_exit.value and self._position == Positions.Short:
+                    step_reward = np.log(2 - ratio) + cost
 
-            if self._position == Positions.Neutral:
 
-                self.tensorboard_log("idle_duration", self.get_idle_duration())
-
-                # Neutral/Idle
-                if action == Actions.Neutral.value:
-                    self.tensorboard_log("Neutral/Idle", category="actions")
-                    # discourage agent from not entering trades
-                    return -1
-
-                # Entry
-                elif action in (Actions.Long_enter.value, Actions.Short_enter.value):
-                    # reward agent for entering trades
-                    # factor = 40 / rsi_now if rsi_now < 40 else 1
-                    return 25 * factor
-
-            elif self._position != Positions.Neutral:
-
-                pnl = self.get_unrealized_profit()
-                # mrr = self.get_most_recent_return()
-                # mrp = self.get_most_recent_profit()
-                # mpp = self.get_max_possible_profit()
-
-                trade_duration = self.get_trade_duration()
-                max_trade_duration = self.rl_config.get('max_trade_duration_candles', 300)
-
-                if trade_duration <= max_trade_duration:
-                    factor *= 1.5
-                elif trade_duration > max_trade_duration:
-                    factor *= 0.5
-
-                # Neutral/Hold
-                if action == Actions.Neutral.value:
-                    self.tensorboard_log("Neutral/Hold", category="actions")
-                    # discourage sitting in position
-                    return -1 * trade_duration / max_trade_duration
-
-                # Exit long
                 if action == Actions.Long_exit.value and self._position == Positions.Long:
-                    if pnl > self.profit_aim:
-                        factor *= self.rr
-                    return float(pnl * factor)
+                    step_reward = np.log(ratio) + cost
 
-                # Exit short
-                elif action == Actions.Short_exit.value and self._position == Positions.Short:
-                    if pnl > self.profit_aim:
-                        factor *= self.rr
-                    return float(pnl * factor)
 
-            return 0.
+            step_reward = float(step_reward)
+
+            return step_reward
+
 
         def reset(self) -> DataFrame:
             obs, history = super().reset()

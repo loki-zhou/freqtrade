@@ -10,7 +10,7 @@ from pandas import DataFrame
 
 from freqtrade.strategy import IStrategy, timeframe_to_minutes
 from freqtrade.persistence import Trade
-from freqtrade.freqai.RL.Base4ActionRLEnv import Actions
+from freqtrade.freqai.RL.Base5ActionRLEnv import Actions
 
 
 logger = logging.getLogger(__name__)

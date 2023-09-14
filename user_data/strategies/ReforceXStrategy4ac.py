@@ -1,13 +1,13 @@
 import logging
 from pandas import DataFrame
-from freqtrade.freqai.RL.Base4ActionRLEnv import Actions
+from freqtrade.freqai.RL.Base5ActionRLEnv import Actions
 from ReforceXBaseStrategy import ReforceXBaseStrategy
 
 
 logger = logging.getLogger(__name__)
 
 
-class ReforceXStrategy4ac(ReforceXBaseStrategy):
+class ReforceXStrategy5ac(ReforceXBaseStrategy):
    
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[
@@ -34,7 +34,7 @@ class ReforceXStrategy4ac(ReforceXBaseStrategy):
 
         dataframe.loc[
             (
-                (dataframe["&-action"] == Actions.Exit.value)
+                (dataframe["&-action"] == Actions.Long_exit.value)
                 & (dataframe["do_predict"] == 1)
                 & (dataframe["volume"] > 0)
             ),
@@ -43,7 +43,7 @@ class ReforceXStrategy4ac(ReforceXBaseStrategy):
 
         dataframe.loc[
             (
-                (dataframe["&-action"] == Actions.Exit.value)
+                (dataframe["&-action"] == Actions.Short_exit.value)
                 & (dataframe["do_predict"] == 1)
                 & (dataframe["volume"] > 0)
             ),
