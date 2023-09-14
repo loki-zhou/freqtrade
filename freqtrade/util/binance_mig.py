@@ -3,8 +3,8 @@ import logging
 from packaging import version
 from sqlalchemy import select
 
-from freqtrade.constants import Config
-from freqtrade.enums.tradingmode import TradingMode
+from freqtrade.constants import DOCS_LINK, Config
+from freqtrade.enums import TradingMode
 from freqtrade.exceptions import OperationalException
 from freqtrade.persistence.pairlock import PairLock
 from freqtrade.persistence.trade_model import Trade
@@ -25,7 +25,7 @@ def migrate_binance_futures_names(config: Config):
     if version.parse("2.6.26") > version.parse(ccxt.__version__):
         raise OperationalException(
             "Please follow the update instructions in the docs "
-            "(https://www.freqtrade.io/en/latest/updating/) to install a compatible ccxt version.")
+            f"({DOCS_LINK}/updating/) to install a compatible ccxt version.")
     _migrate_binance_futures_db(config)
     migrate_binance_futures_data(config)
 
@@ -64,7 +64,7 @@ def migrate_binance_futures_data(config: Config):
         return
 
     from freqtrade.data.history.idatahandler import get_datahandler
-    dhc = get_datahandler(config['datadir'], config.get('dataformat_ohlcv', 'json'))
+    dhc = get_datahandler(config['datadir'], config['dataformat_ohlcv'])
 
     paircombs = dhc.ohlcv_get_available_data(
         config['datadir'],

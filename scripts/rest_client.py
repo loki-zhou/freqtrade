@@ -29,7 +29,7 @@ logging.basicConfig(
 logger = logging.getLogger("ft_rest_client")
 
 
-class FtRestClient():
+class FtRestClient:
 
     def __init__(self, serverurl, username=None, password=None):
 
@@ -133,6 +133,20 @@ class FtRestClient():
         :return: json object
         """
         return self._get("daily", params={"timescale": days} if days else None)
+
+    def weekly(self, weeks=None):
+        """Return the profits for each week, and amount of trades.
+
+        :return: json object
+        """
+        return self._get("weekly", params={"timescale": weeks} if weeks else None)
+
+    def monthly(self, months=None):
+        """Return the profits for each month, and amount of trades.
+
+        :return: json object
+        """
+        return self._get("monthly", params={"timescale": months} if months else None)
 
     def edge(self):
         """Return information about edge.
@@ -313,6 +327,13 @@ class FtRestClient():
         :return: json object
         """
         return self._get(f"strategy/{strategy}")
+
+    def pairlists_available(self):
+        """Lists available pairlist providers
+
+        :return: json object
+        """
+        return self._get("pairlists/available")
 
     def plot_config(self):
         """Return plot configuration if the strategy defines one.

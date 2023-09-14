@@ -67,8 +67,7 @@ ARGS_BUILD_STRATEGY = ["user_data_dir", "strategy", "template"]
 
 ARGS_CONVERT_DATA = ["pairs", "format_from", "format_to", "erase", "exchange"]
 
-ARGS_CONVERT_DATA_OHLCV = ARGS_CONVERT_DATA + ["timeframes", "trading_mode",
-                                               "candle_types"]
+ARGS_CONVERT_DATA_OHLCV = ARGS_CONVERT_DATA + ["timeframes", "trading_mode", "candle_types"]
 
 ARGS_CONVERT_TRADES = ["pairs", "timeframes", "exchange", "dataformat_ohlcv", "dataformat_trades"]
 
@@ -117,7 +116,11 @@ NO_CONF_REQURIED = ["convert-data", "convert-trade-data", "download-data", "list
 
 NO_CONF_ALLOWED = ["create-userdir", "list-exchanges", "new-strategy"]
 
-ARGS_STRATEGY_UTILS = ["strategy_list", "strategy_path", "recursive_strategy_search"]
+ARGS_STRATEGY_UPDATER = ["strategy_list", "strategy_path", "recursive_strategy_search"]
+
+ARGS_LOOKAHEAD_ANALYSIS = [
+    a for a in ARGS_BACKTEST if a not in ("position_stacking", "use_max_market_positions", 'cache')
+    ] + ["minimum_trade_amount", "targeted_trade_amount", "lookahead_analysis_exportfilename"]
 
 
 class Arguments:
@@ -201,8 +204,9 @@ class Arguments:
                                         start_install_ui, start_list_data, start_list_exchanges,
                                         start_list_freqAI_models, start_list_markets,
                                         start_list_strategies, start_list_timeframes,
-                                        start_new_config, start_new_strategy, start_plot_dataframe,
-                                        start_plot_profit, start_show_trades, start_strategy_update,
+                                        start_lookahead_analysis, start_new_config,
+                                        start_new_strategy, start_plot_dataframe, start_plot_profit,
+                                        start_show_trades, start_strategy_update,
                                         start_test_pairlist, start_trading, start_webserver)
 
         subparsers = self.parser.add_subparsers(dest='command',
@@ -451,4 +455,15 @@ class Arguments:
                                                           'files to the current version',
                                                      parents=[_common_parser])
         strategy_updater_cmd.set_defaults(func=start_strategy_update)
-        self._build_args(optionlist=ARGS_STRATEGY_UTILS, parser=strategy_updater_cmd)
+        self._build_args(optionlist=ARGS_STRATEGY_UPDATER, parser=strategy_updater_cmd)
+
+        # Add lookahead_analysis subcommand
+        lookahead_analayis_cmd = subparsers.add_parser(
+            'lookahead-analysis',
+            help="Check for potential look ahead bias.",
+            parents=[_common_parser, _strategy_parser])
+
+        lookahead_analayis_cmd.set_defaults(func=start_lookahead_analysis)
+
+        self._build_args(optionlist=ARGS_LOOKAHEAD_ANALYSIS,
+                         parser=lookahead_analayis_cmd)
